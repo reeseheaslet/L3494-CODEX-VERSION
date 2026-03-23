@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+{% block title %}Photo Moderation Queue · Admin · Local 3494{% endblock %}
+
+{% block content %}
+<section class="bg-navy py-12">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="text-fire font-heading font-semibold text-xs uppercase tracking-widest mb-2">Administration</div>
+        <h1 class="font-heading font-bold text-3xl text-white">Photo Moderation Queue</h1>
+        <p class="text-gray-400 mt-1">Review and approve pending family photos</p>
+    </div>
+</section>
+<div class="h-1 bg-gradient-to-r from-fire via-red-400 to-fire"></div>
+
+<section class="py-8 bg-gray-50">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+
+        <!-- Back to Admin -->
+        <div class="mb-6">
+            <a href="/admin" class="text-fire hover:text-fire-dark font-semibold text-sm">← Back to Admin Dashboard</a>
+        </div>
+
+        <!-- Status -->
+        {% if photos %}
+        <div class="mb-6 bg-white rounded-lg p-6 border border-gray-200">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-600 text-sm">Pending photos awaiting approval</p>
+                    <p class="font-heading font-bold text-3xl text-navy">{{ photos|length }}</p>
+                </div>
+                <form method="POST" action="/admin/photos/approve" class="ml-auto">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="approve_all" value="1">
+                    <button type="submit" class="bg-green-500 hover:bg-green-600 text-white font-semibold px-6 py-2 rounded transition text-sm">
+                        ✓ Approve All
+                    </button>
+                </form>
+            </div>
+        </div>
+        {% endif %}
+
+        {% if photos %}
+        <!-- Photo Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {% for photo in photos %}
+            <div class="bg-white rounded-lg overflow-hidden shadow-md border border-gray-200">
+                <!-- Thumbnail -->
+                <div class="bg-gray-200 h-48 overflow-hidden">
+                    <img src="/static/images/family/{{ photo.filename }}" 
+                         alt="{{ photo.caption }}" 
+                         class="w-full h-full object-cover">
+                </div>
+
+                <!-- Photo Info -->
+                <div class="p-4 space-y-2">
+                    {% if photo.caption %}
+                    <div>
+                        <p class="text-sm font-semibold text-gray-700">Caption</p>
+                        <p class="text-gray-600 text-sm">{{ photo.caption }}</p>
+                    </div>
+                    {% endif %}
+
+                    <div>
+                        <p class="text-xs text-gray-500">Uploader</p>
+                        <p class="text-sm font-medium text-gray-700">{{ photo.uploader_name or 'Unknown' }}</p>
+                    </div>
+
+                    {% if photo.album_name %}
+                    <div>
+                        <p class="text-xs text-gray-500">Album</p>
+                        <p class="text-sm font-medium text-gray-700">{{ photo.album_name }}</p>
+                    </div>
+                    {% endif %}
+
+                    <div>
+                        <p class="text-xs text-gray-500">Uploaded</p>
+                        <p class="text-sm text-gray-600">{{ photo.created_at[:10] }}</p>
+                    </div>
+                </div>
+
+                <!-- Actions -->
+                <div class="p-4 bg-gray-50 border-t border-gray-200 flex gap-3">
+                    <form method="POST" action="/admin/photos/approve" class="flex-1">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <input type="hidden" name="photo_id" value="{{ photo.id }}">
+                        <button type="submit" class="w-full bg-green-500 hover:bg-green-600 text-white font-semibold py-2 rounded transition text-sm">
+                            ✓ Approve
+                        </button>
+                    </form>
+                    <form method="POST" action="/admin/photos/reject" class="flex-1">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <input type="hidden" name="photo_id" value="{{ photo.id }}">
+                        <button type="submit" class="w-full bg-red-500 hover:bg-red-600 text-white font-semibold py-2 rounded transition text-sm">
+                            ✗ Reject
+                        </button>
+                    </form>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <!-- Empty State -->
+        <div class="bg-white rounded-lg p-12 text-center shadow-sm border border-gray-200">
+            <svg class="w-16 h-16 text-green-300 mx-auto mb-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
+            <p class="text-gray-700 text-lg font-semibold mb-2">No pending photos 🎉</p>
+            <p class="text-gray-500">All family photos have been reviewed!</p>
+            <a href="/admin" class="mt-6 inline-block text-fire hover:text-fire-dark font-semibold text-sm">← Back to Admin Dashboard</a>
+        </div>
+        {% endif %}
+
+    </div>
+</section>
+
+{% endblock %}

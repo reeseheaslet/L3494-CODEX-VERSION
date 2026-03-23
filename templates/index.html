@@ -1,0 +1,235 @@
+{% extends "base.html" %}
+{% block title %}Home · Local 3494 · Davis Professional Firefighters{% endblock %}
+
+{% block content %}
+
+<!-- Page Banner -->
+<section class="bg-navy text-white py-16 md:py-20">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="max-w-3xl">
+            <div class="text-fire font-heading font-semibold text-5xl uppercase tracking-widest mb-3">Local 3494</div>
+            <h1 class="font-heading font-bold text-4xl md:text-5xl text-white mb-5 leading-tight">
+                Davis Professional<br>Firefighters
+            </h1>
+            <p class="text-gray-300 text-lg mb-8 leading-relaxed">
+                Representing the men and women who protect the City of Davis. Proudly affiliated with the International Association of Fire Fighters.
+            </p>
+            <div class="flex flex-wrap gap-3">
+                <a href="/events" class="bg-fire hover:bg-fire-dark text-white font-semibold px-6 py-3 rounded transition text-sm">
+                    View Events
+                </a>
+                <a href="/store" class="bg-fire hover:bg-fire-dark text-white font-semibold px-6 py-3 rounded transition text-sm">
+                    Friends Store
+                </a>
+                <a href="/about" class="bg-white/10 hover:bg-white/20 text-white font-semibold px-6 py-3 rounded transition text-sm border border-white/20">
+                    About Our Union
+                </a>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Divider bar -->
+<div class="h-1 bg-gradient-to-r from-fire via-red-400 to-fire"></div>
+
+<!-- Quick Stats Bar -->
+<section class="bg-white border-b border-gray-200 shadow-sm">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="grid grid-cols-3 divide-x divide-gray-200">
+            <div class="py-6 px-8 text-center">
+                <div class="font-heading font-bold text-3xl text-navy">3</div>
+                <div class="text-gray-500 text-sm mt-1">Fire Stations</div>
+            </div>
+            <div class="py-6 px-8 text-center">
+                <div class="font-heading font-bold text-3xl text-navy">50+</div>
+                <div class="text-gray-500 text-sm mt-1">Union Members</div>
+            </div>
+            <div class="py-6 px-8 text-center">
+                <div class="font-heading font-bold text-3xl text-navy">24/7</div>
+                <div class="text-gray-500 text-sm mt-1">Serving Davis</div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Main Content -->
+<section class="py-14 bg-gray-50">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+
+            <!-- Left: About + Links (2 cols) -->
+            <div class="lg:col-span-2 space-y-8">
+
+                <!-- About -->
+                <div class="bg-white rounded-lg border border-gray-200 shadow-sm p-8">
+                    <div class="flex items-center gap-3 mb-5">
+                        <div class="w-1 h-8 bg-fire rounded"></div>
+                        <h2 class="font-heading font-bold text-xl text-navy">About Our Union</h2>
+                    </div>
+                    <p class="text-gray-600 leading-relaxed mb-4">
+                        Local 3494 represents the professional firefighters of the City of Davis Fire Department. Founded to protect the rights and welfare of our members, we are committed to ensuring safe working conditions, fair compensation, and excellence in public safety.
+                    </p>
+                    <p class="text-gray-600 leading-relaxed">
+                        Our members serve the Davis community around the clock, responding to emergencies with professionalism and dedication. The union advocates on behalf of every member — from contract negotiations to workplace safety standards.
+                    </p>
+                    <a href="/about" class="inline-block mt-5 text-fire hover:text-fire-dark font-semibold text-sm transition">Learn More About Us →</a>
+                </div>
+
+                <!-- Quick Links Grid -->
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <a href="/events" class="bg-white border border-gray-200 hover:border-fire hover:shadow-md rounded-lg p-6 transition group">
+                        <div class="w-10 h-10 bg-fire/10 rounded-lg flex items-center justify-center mb-4 group-hover:bg-fire/20 transition">
+                            <svg class="w-5 h-5 text-fire" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                        </div>
+                        <h3 class="font-heading font-bold text-navy text-sm mb-1">Events</h3>
+                        <p class="text-gray-500 text-xs">Union meetings & community activities</p>
+                    </a>
+                    <a href="/store" class="bg-white border border-gray-200 hover:border-fire hover:shadow-md rounded-lg p-6 transition group">
+                        <div class="w-10 h-10 bg-fire/10 rounded-lg flex items-center justify-center mb-4 group-hover:bg-fire/20 transition">
+                            <svg class="w-5 h-5 text-fire" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/></svg>
+                        </div>
+                        <h3 class="font-heading font-bold text-navy text-sm mb-1">Store</h3>
+                        <p class="text-gray-500 text-xs">Friends of Local 3494 gear</p>
+                    </a>
+                    <a href="/members" class="bg-white border border-gray-200 hover:border-fire hover:shadow-md rounded-lg p-6 transition group">
+                        <div class="w-10 h-10 bg-fire/10 rounded-lg flex items-center justify-center mb-4 group-hover:bg-fire/20 transition">
+                            <svg class="w-5 h-5 text-fire" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+                        </div>
+                        <h3 class="font-heading font-bold text-navy text-sm mb-1">Members</h3>
+                        <p class="text-gray-500 text-xs">Portal, shifts, polls & more</p>
+                    </a>
+                </div>
+
+                <!-- Leadership Section -->
+                <div class="bg-white rounded-lg border border-gray-200 shadow-sm p-8">
+                    <div class="flex items-center gap-3 mb-8">
+                        <div class="w-1 h-8 bg-fire rounded"></div>
+                        <h2 class="font-heading font-bold text-xl text-navy">Union Leadership</h2>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+                        <!-- Matt Fix - President -->
+                        <div class="text-center">
+                            <div class="mb-4 overflow-hidden rounded-full bg-gray-200 w-32 h-32 mx-auto flex items-center justify-center">
+                                <img src="/static/images/leaders/leader1.jpg" alt="Matt Fix" class="w-full h-full object-cover">
+                            </div>
+                            <h3 class="font-heading font-bold text-lg text-navy mb-1">Matt Fix</h3>
+                            <p class="text-fire font-semibold text-sm mb-2">President</p>
+                            <p class="text-gray-600 text-sm leading-relaxed">Matt has served as President since 2020. 15 years with the Davis Fire Department.</p>
+                        </div>
+
+                        <!-- Andrew Whipple - Vice President -->
+                        <div class="text-center">
+                            <div class="mb-4 overflow-hidden rounded-full bg-gray-200 w-32 h-32 mx-auto flex items-center justify-center">
+                                <img src="/static/images/leaders/leader2.jpg" alt="Andrew Whipple" class="w-full h-full object-cover">
+                            </div>
+                            <h3 class="font-heading font-bold text-lg text-navy mb-1">Andrew Whipple</h3>
+                            <p class="text-fire font-semibold text-sm mb-2">Vice President</p>
+                            <p class="text-gray-600 text-sm leading-relaxed">Andrew joined the leadership team in 2021. Over 12 years of experience, specializing in training and development.</p>
+                        </div>
+
+                        <!-- Dan Wong - Treasurer -->
+                        <div class="text-center">
+                            <div class="mb-4 overflow-hidden rounded-full bg-gray-200 w-32 h-32 mx-auto flex items-center justify-center">
+                                <img src="/static/images/leaders/leader3.jpg" alt="Dan Wong" class="w-full h-full object-cover">
+                            </div>
+                            <h3 class="font-heading font-bold text-lg text-navy mb-1">Dan Wong</h3>
+                            <p class="text-fire font-semibold text-sm mb-2">Treasurer</p>
+                            <p class="text-gray-600 text-sm leading-relaxed">Dan has served as Treasurer since 2019, managing the union's finances and fundraising events.</p>
+                        </div>
+
+                        <!-- Matthew Elders - Member at Large -->
+                        <div class="text-center">
+                            <div class="mb-4 overflow-hidden rounded-full bg-gray-200 w-32 h-32 mx-auto flex items-center justify-center">
+                                <img src="/static/images/leaders/leader4_elders.jpg" alt="Matthew Elders" class="w-full h-full object-cover">
+                            </div>
+                            <h3 class="font-heading font-bold text-lg text-navy mb-1">Matthew Elders</h3>
+                            <p class="text-fire font-semibold text-sm mb-2">Member at Large</p>
+                            <p class="text-gray-600 text-sm leading-relaxed">Focuses on community engagement and outreach programs.</p>
+                        </div>
+
+                        <!-- John Ellis - Member at Large -->
+                        <div class="text-center">
+                            <div class="mb-4 overflow-hidden rounded-full bg-gray-200 w-32 h-32 mx-auto flex items-center justify-center">
+                                <img src="/static/images/leaders/leader5.jpg" alt="John Ellis" class="w-full h-full object-cover">
+                            </div>
+                            <h3 class="font-heading font-bold text-lg text-navy mb-1">John Ellis</h3>
+                            <p class="text-fire font-semibold text-sm mb-2">Member at Large</p>
+                            <p class="text-gray-600 text-sm leading-relaxed">Specializes in member advocacy and labor relations. 10 years with the department.</p>
+                        </div>
+
+                        <!-- Chad Poulter - Member at Large -->
+                        <div class="text-center">
+                            <div class="mb-4 overflow-hidden rounded-full bg-gray-200 w-32 h-32 mx-auto flex items-center justify-center">
+                                <img src="/static/images/leaders/leader6.jpg" alt="Chad Poulter" class="w-full h-full object-cover">
+                            </div>
+                            <h3 class="font-heading font-bold text-lg text-navy mb-1">Chad Poulter</h3>
+                            <p class="text-fire font-semibold text-sm mb-2">Member at Large</p>
+                            <p class="text-gray-600 text-sm leading-relaxed">Coordinates special projects and events. Joined the leadership team in 2022.</p>
+                        </div>
+
+                        <!-- Luis Parrilla - Secretary -->
+                        <div class="text-center">
+                            <div class="mb-4 overflow-hidden rounded-full bg-gray-200 w-32 h-32 mx-auto flex items-center justify-center">
+                                <img src="/static/images/leaders/leader_parrilla.jpg" alt="Luis Parrilla" class="w-full h-full object-cover">
+                            </div>
+                            <h3 class="font-heading font-bold text-lg text-navy mb-1">Luis Parrilla</h3>
+                            <p class="text-fire font-semibold text-sm mb-2">Secretary</p>
+                            <p class="text-gray-600 text-sm leading-relaxed">Serves as Secretary for Local 3494.</p>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Right: Upcoming Events Sidebar -->
+            <div class="space-y-6">
+                <div class="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
+                    <div class="bg-navy px-6 py-4 flex items-center justify-between">
+                        <h2 class="font-heading font-bold text-white text-sm uppercase tracking-wider">Upcoming Events</h2>
+                        <a href="/events" class="text-gray-400 hover:text-white text-xs transition">View all →</a>
+                    </div>
+                    <div class="divide-y divide-gray-100">
+                        {% set months = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'] %}
+                        {% if upcoming_events %}
+                            {% for event in upcoming_events %}
+                            {% set parts = event.event_date.split('-') %}
+                            {% set month_str = months[parts[1]|int - 1] %}
+                            {% set day_str = parts[2]|int %}
+                            <div class="px-6 py-4 hover:bg-gray-50 transition">
+                                <div class="flex gap-4 items-start">
+                                    <div class="bg-fire text-white rounded text-center min-w-[44px] py-1">
+                                        <div class="text-xs font-semibold leading-none">{{ month_str }}</div>
+                                        <div class="text-xl font-bold font-heading leading-tight">{{ day_str }}</div>
+                                    </div>
+                                    <div>
+                                        <div class="font-semibold text-navy text-sm">{{ event.title }}</div>
+                                        <div class="text-gray-500 text-xs mt-0.5">{{ event.location or '' }}{% if event.event_time %} · {{ event.event_time }}{% endif %}</div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        {% else %}
+                            <div class="px-6 py-4 text-gray-500 text-sm">No upcoming events.</div>
+                        {% endif %}
+                    </div>
+                    <div class="px-6 py-3 bg-gray-50 border-t border-gray-100">
+                        <a href="/events" class="text-fire hover:text-fire-dark font-semibold text-sm transition">See all events →</a>
+                    </div>
+                </div>
+
+                <!-- Contact Card -->
+                <div class="bg-navy text-white rounded-lg p-6">
+                    <h3 class="font-heading font-bold text-sm uppercase tracking-wider mb-3">Contact Us</h3>
+                    <p class="text-gray-300 text-sm mb-4">Questions about the union or membership?</p>
+                    <a href="/contact" class="block text-center bg-fire hover:bg-fire-dark text-white text-sm font-semibold py-2 rounded transition">
+                        Get in Touch
+                    </a>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</section>
+
+{% endblock %}

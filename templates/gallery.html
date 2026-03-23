@@ -1,0 +1,223 @@
+{% extends "base.html" %}
+{% block title %}Gallery · Local 3494 · Davis Professional Firefighters{% endblock %}
+
+{% block content %}
+
+<!-- Page Banner -->
+<section class="bg-navy text-white py-16 md:py-20">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <h1 class="font-heading font-bold text-4xl md:text-5xl text-white mb-3">
+            Gallery
+        </h1>
+        <p class="text-gray-300 text-lg">
+            Local 3494 in action — events, honor guard, and community service
+        </p>
+    </div>
+</section>
+
+<!-- Divider bar -->
+<div class="h-1 bg-gradient-to-r from-fire via-red-400 to-fire"></div>
+
+<!-- Filter Tabs -->
+<section class="bg-white border-b border-gray-200 sticky top-16 z-40">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex items-center gap-2 overflow-x-auto py-4">
+            <button class="filter-tab whitespace-nowrap px-4 py-2 rounded-full font-semibold text-sm transition active" data-category="all">
+                All
+            </button>
+            <button class="filter-tab whitespace-nowrap px-4 py-2 rounded-full font-semibold text-sm transition" data-category="honor-guard">
+                Honor Guard
+            </button>
+            <button class="filter-tab whitespace-nowrap px-4 py-2 rounded-full font-semibold text-sm transition" data-category="events">
+                Events
+            </button>
+        </div>
+    </div>
+</section>
+
+<!-- Gallery Grid -->
+<section class="py-12 bg-gray-50">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div id="gallery-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 auto-rows-max">
+            {% for image in images %}
+            <div class="gallery-item cursor-pointer overflow-hidden rounded-lg shadow-md hover:shadow-lg transition group" data-category="{{ image.category }}" data-image-id="{{ image.id }}">
+                <div class="relative bg-gray-200 overflow-hidden h-64 sm:h-72">
+                    <img src="/static/images/gallery/{{ image.filename }}" 
+                         alt="{{ image.caption }}" 
+                         class="w-full h-full object-cover group-hover:scale-105 transition duration-300"
+                         loading="lazy">
+                    <div class="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition"></div>
+                </div>
+                {% if image.caption %}
+                <div class="bg-white p-3 text-sm text-gray-700">
+                    {{ image.caption }}
+                </div>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- Empty State -->
+        <div id="empty-state" class="hidden text-center py-12">
+            <svg class="w-16 h-16 text-gray-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+            </svg>
+            <p class="text-gray-500 text-lg">No images found for this category</p>
+        </div>
+    </div>
+</section>
+
+<!-- Lightbox Modal -->
+<div id="lightbox" class="hidden fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4 overscroll-none">
+    <div class="relative max-w-4xl w-full max-h-[90vh] flex flex-col">
+        <!-- Close Button -->
+        <button id="lightbox-close" class="absolute -top-10 -right-10 text-white hover:text-gray-300 z-10 transition">
+            <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
+        </button>
+
+        <!-- Navigation Buttons -->
+        <button id="lightbox-prev" class="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-12 text-white hover:text-gray-300 z-10 transition hidden md:block">
+            <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+        </button>
+
+        <button id="lightbox-next" class="absolute right-0 top-1/2 -translate-y-1/2 translate-x-12 text-white hover:text-gray-300 z-10 transition hidden md:block">
+            <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"/></svg>
+        </button>
+
+        <!-- Image Container -->
+        <div class="flex-1 flex items-center justify-center bg-black overflow-auto">
+            <img id="lightbox-image" src="" alt="" class="max-w-full max-h-full object-contain">
+        </div>
+
+        <!-- Caption -->
+        <div class="bg-black/90 text-white p-4 text-center">
+            <p id="lightbox-caption" class="text-sm md:text-base"></p>
+        </div>
+    </div>
+</div>
+
+<script>
+// Filter functionality
+const filterTabs = document.querySelectorAll('.filter-tab');
+const galleryItems = document.querySelectorAll('.gallery-item');
+const emptyState = document.getElementById('empty-state');
+
+filterTabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+        const category = tab.dataset.category;
+
+        // Update active tab
+        filterTabs.forEach(t => t.classList.remove('active', 'bg-fire', 'text-white', 'bg-navy', 'text-white'));
+        tab.classList.add('active');
+        if (category === 'all') {
+            tab.classList.add('bg-navy', 'text-white');
+        } else {
+            tab.classList.add('bg-fire', 'text-white');
+        }
+
+        // Filter items
+        let visibleCount = 0;
+        galleryItems.forEach(item => {
+            const itemCategory = item.dataset.category;
+            const show = category === 'all' || itemCategory === category;
+            item.style.display = show ? '' : 'none';
+            if (show) visibleCount++;
+        });
+
+        // Show/hide empty state
+        emptyState.classList.toggle('hidden', visibleCount > 0);
+    });
+});
+
+// Set initial active state
+const allTab = document.querySelector('[data-category="all"]');
+allTab.classList.add('bg-navy', 'text-white', 'active');
+
+// Lightbox functionality
+const lightbox = document.getElementById('lightbox');
+const lightboxImage = document.getElementById('lightbox-image');
+const lightboxCaption = document.getElementById('lightbox-caption');
+const lightboxClose = document.getElementById('lightbox-close');
+const lightboxPrev = document.getElementById('lightbox-prev');
+const lightboxNext = document.getElementById('lightbox-next');
+let currentImageIndex = 0;
+let visibleImages = [];
+
+function updateVisibleImages() {
+    visibleImages = Array.from(galleryItems).filter(item => item.style.display !== 'none');
+}
+
+function openLightbox(imageId) {
+    updateVisibleImages();
+    const index = visibleImages.findIndex(item => item.dataset.imageId === imageId);
+    if (index !== -1) {
+        currentImageIndex = index;
+        showLightboxImage();
+        lightbox.classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+    }
+}
+
+function showLightboxImage() {
+    if (visibleImages.length === 0) return;
+    
+    const item = visibleImages[currentImageIndex];
+    const img = item.querySelector('img');
+    const caption = item.querySelector('p');
+    
+    lightboxImage.src = img.src;
+    lightboxImage.alt = img.alt;
+    lightboxCaption.textContent = caption ? caption.textContent : '';
+
+    // Show/hide nav buttons
+    lightboxPrev.style.display = visibleImages.length > 1 ? 'block' : 'none';
+    lightboxNext.style.display = visibleImages.length > 1 ? 'block' : 'none';
+}
+
+function closeLightbox() {
+    lightbox.classList.add('hidden');
+    document.body.style.overflow = '';
+}
+
+// Gallery item click handler
+galleryItems.forEach(item => {
+    item.addEventListener('click', () => {
+        openLightbox(item.dataset.imageId);
+    });
+});
+
+// Lightbox controls
+lightboxClose.addEventListener('click', closeLightbox);
+
+lightboxPrev.addEventListener('click', () => {
+    currentImageIndex = (currentImageIndex - 1 + visibleImages.length) % visibleImages.length;
+    showLightboxImage();
+});
+
+lightboxNext.addEventListener('click', () => {
+    currentImageIndex = (currentImageIndex + 1) % visibleImages.length;
+    showLightboxImage();
+});
+
+// Keyboard navigation
+document.addEventListener('keydown', (e) => {
+    if (lightbox.classList.contains('hidden')) return;
+    
+    if (e.key === 'Escape') closeLightbox();
+    if (e.key === 'ArrowLeft') {
+        currentImageIndex = (currentImageIndex - 1 + visibleImages.length) % visibleImages.length;
+        showLightboxImage();
+    }
+    if (e.key === 'ArrowRight') {
+        currentImageIndex = (currentImageIndex + 1) % visibleImages.length;
+        showLightboxImage();
+    }
+});
+
+// Close lightbox on background click
+lightbox.addEventListener('click', (e) => {
+    if (e.target === lightbox) closeLightbox();
+});
+</script>
+
+{% endblock %}

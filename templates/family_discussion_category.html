@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+{% block title %}{{ category.name }} · Local 3494{% endblock %}
+
+{% block content %}
+<section class="bg-navy py-12">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="text-fire font-heading font-semibold text-xs uppercase tracking-widest mb-2">Family Portal • Discussions</div>
+        <h1 class="font-heading font-bold text-3xl text-white">{{ category.name }}</h1>
+        <p class="text-gray-400 mt-1">{{ category.description }}</p>
+    </div>
+</section>
+<div class="h-1 bg-gradient-to-r from-fire via-red-400 to-fire"></div>
+
+<section class="py-12 bg-gray-50">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+
+        <!-- New Post Button -->
+        <div class="mb-8">
+            <a href="/family/discussions/post/new" class="inline-block bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-semibold transition">
+                ✏️ Start a New Discussion
+            </a>
+            <a href="/family/discussions" class="ml-3 inline-block text-navy hover:text-fire font-semibold transition">
+                ← All Categories
+            </a>
+        </div>
+
+        <!-- Posts List -->
+        <div class="space-y-4">
+            {% if posts %}
+                {% for post in posts %}
+                <a href="/family/discussions/post/{{ post.id }}" class="block bg-white border border-gray-200 hover:border-fire hover:shadow-md rounded-lg p-6 transition">
+                    <div class="flex items-start justify-between">
+                        <div class="flex-1">
+                            <div class="flex items-center gap-3 mb-3">
+                                <div class="w-10 h-10 rounded-full bg-navy text-white flex items-center justify-center text-sm font-bold flex-shrink-0">
+                                    {% if post.profile_photo %}
+                                        <img src="{{ get_profile_photo(post.author_id) }}" alt="{{ post.author_name }}" class="w-full h-full rounded-full object-cover">
+                                    {% else %}
+                                        {{ post.author_name[0] if post.author_name else '?' }}
+                                    {% endif %}
+                                </div>
+                                <div>
+                                    <div class="font-semibold text-navy">{{ post.author_name }}</div>
+                                    <div class="text-xs text-gray-500">{{ post.created_at[:16] }}</div>
+                                </div>
+                            </div>
+                            <h3 class="font-heading font-bold text-lg text-navy mb-2">{{ post.title }}</h3>
+                            <div class="flex items-center gap-4 text-sm text-gray-600">
+                                <span>💬 {{ post.comment_count }} comment{% if post.comment_count != 1 %}s{% endif %}</span>
+                                {% if post.like_count > 0 %}
+                                <span>👍 {{ post.like_count }}</span>
+                                {% endif %}
+                                {% if post.heart_count > 0 %}
+                                <span>❤️ {{ post.heart_count }}</span>
+                                {% endif %}
+                                {% if post.locked %}
+                                <span class="text-fire font-semibold">🔒 Locked</span>
+                                {% endif %}
+                                {% if post.expires_at %}
+                                    {% set days_left = (post.expires_at[:10] | string | replace('-', '') | int) - (now | strftime('%Y%m%d') | int) %}
+                                    {% if days_left <= 7 and days_left >= 0 %}
+                                    <span class="text-orange-600 font-semibold">⚠️ Expires in {{ days_left }} day{% if days_left != 1 %}s{% endif %}</span>
+                                    {% endif %}
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </a>
+                {% endfor %}
+            {% else %}
+                <div class="bg-white border border-gray-200 rounded-lg p-8 text-center">
+                    <p class="text-gray-600 mb-4">No discussions yet in this category.</p>
+                    <a href="/family/discussions/post/new" class="text-fire hover:text-fire-dark font-semibold">Start the conversation →</a>
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- Pagination -->
+        {% if total_pages > 1 %}
+        <div class="mt-8 flex justify-center gap-2">
+            {% if page > 1 %}
+            <a href="?page=1" class="px-3 py-2 bg-white border border-gray-200 rounded hover:bg-gray-50 text-sm">First</a>
+            <a href="?page={{ page - 1 }}" class="px-3 py-2 bg-white border border-gray-200 rounded hover:bg-gray-50 text-sm">← Prev</a>
+            {% endif %}
+            
+            {% for p in range(1, total_pages + 1) %}
+                {% if p == page %}
+                <span class="px-3 py-2 bg-fire text-white rounded text-sm font-semibold">{{ p }}</span>
+                {% elif p >= page - 2 and p <= page + 2 %}
+                <a href="?page={{ p }}" class="px-3 py-2 bg-white border border-gray-200 rounded hover:bg-gray-50 text-sm">{{ p }}</a>
+                {% endif %}
+            {% endfor %}
+            
+            {% if page < total_pages %}
+            <a href="?page={{ page + 1 }}" class="px-3 py-2 bg-white border border-gray-200 rounded hover:bg-gray-50 text-sm">Next →</a>
+            <a href="?page={{ total_pages }}" class="px-3 py-2 bg-white border border-gray-200 rounded hover:bg-gray-50 text-sm">Last</a>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+</section>
+{% endblock %}

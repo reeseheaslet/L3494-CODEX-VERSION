@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+{% block title %}Family Discussions · Local 3494{% endblock %}
+
+{% block content %}
+<section class="bg-navy py-12">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="text-fire font-heading font-semibold text-xs uppercase tracking-widest mb-2">Family Portal</div>
+        <h1 class="font-heading font-bold text-3xl text-white">Family Discussions</h1>
+        <p class="text-gray-400 mt-1">Connect with other families, share resources, and stay informed</p>
+    </div>
+</section>
+<div class="h-1 bg-gradient-to-r from-fire via-red-400 to-fire"></div>
+
+<section class="py-12 bg-gray-50">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+
+        <!-- Family Portal Navigation Tabs -->
+        <div class="bg-white border border-gray-200 rounded-lg mb-8 overflow-hidden">
+            <div class="flex flex-wrap border-b border-gray-200">
+                <a href="/family" class="px-6 py-3 font-semibold text-gray-600 hover:text-navy hover:bg-gray-50">
+                    🏠 Home
+                </a>
+                <a href="/family/events" class="px-6 py-3 font-semibold text-gray-600 hover:text-navy hover:bg-gray-50">
+                    📅 Events
+                </a>
+                <a href="/family/roster" class="px-6 py-3 font-semibold text-gray-600 hover:text-navy hover:bg-gray-50">
+                    👥 Roster
+                </a>
+                <a href="/family/announcements" class="px-6 py-3 font-semibold text-gray-600 hover:text-navy hover:bg-gray-50">
+                    📢 Announcements
+                </a>
+                <a href="/family/photos" class="px-6 py-3 font-semibold text-gray-600 hover:text-navy hover:bg-gray-50">
+                    📸 Photos
+                </a>
+                <a href="/family/chat" class="px-6 py-3 font-semibold text-gray-600 hover:text-navy hover:bg-gray-50">
+                    💬 Chat
+                </a>
+                <a href="/family/discussions" class="px-6 py-3 font-semibold text-navy border-b-2 border-fire hover:bg-gray-50">
+                    💭 Discussions
+                </a>
+            </div>
+        </div>
+
+        <!-- New Post Button -->
+        <div class="mb-8">
+            <a href="/family/discussions/post/new" class="inline-block bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-semibold transition">
+                ✏️ Start a New Discussion
+            </a>
+        </div>
+
+        <!-- Discussion Categories Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
+            {% for category in categories %}
+            <a href="/family/discussions/{{ category.slug }}" class="bg-white border border-gray-200 hover:border-fire hover:shadow-md rounded-lg p-6 transition group">
+                <div class="flex items-start justify-between mb-4">
+                    <div>
+                        <h3 class="font-heading font-bold text-navy text-lg group-hover:text-fire transition">{{ category.name }}</h3>
+                        {% if category.expiry_days %}
+                        <div class="text-xs text-gray-500 mt-1">⏰ Posts expire in {{ category.expiry_days }} days</div>
+                        {% endif %}
+                    </div>
+                    <div class="text-2xl opacity-50">💭</div>
+                </div>
+                <p class="text-gray-600 text-sm mb-4">{{ category.description }}</p>
+                <div class="flex items-center justify-between text-sm text-gray-500">
+                    <span>{{ category.post_count }} post{% if category.post_count != 1 %}s{% endif %}</span>
+                    {% if category.last_activity %}
+                    <span class="text-xs">Last: {{ category.last_activity[:10] }}</span>
+                    {% endif %}
+                </div>
+            </a>
+            {% endfor %}
+        </div>
+
+        <!-- Recent Activity Sidebar -->
+        {% if recent_posts %}
+        <div class="bg-white border border-gray-200 rounded-lg p-8">
+            <h2 class="font-heading font-bold text-2xl text-navy mb-6">Recent Activity</h2>
+            <div class="space-y-4">
+                {% for post in recent_posts %}
+                <div class="border-b border-gray-200 pb-4 last:border-b-0">
+                    <div class="flex items-start gap-3">
+                        <div class="flex-1">
+                            <a href="/family/discussions/post/{{ post.id }}" class="text-fire hover:text-fire-dark font-semibold">
+                                {{ post.title }}
+                            </a>
+                            <div class="text-sm text-gray-600 mt-1">
+                                by {{ post.author_name }} in 
+                                <a href="/family/discussions/{{ post.category_name | lower | replace(' ', '-') }}" class="text-navy hover:text-fire transition">
+                                    {{ post.category_name }}
+                                </a>
+                            </div>
+                            <div class="text-xs text-gray-500 mt-1">{{ post.created_at[:10] }} • {{ post.comment_count }} comment{% if post.comment_count != 1 %}s{% endif %}</div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Back to Home -->
+        <div class="mt-10 text-center">
+            <a href="/family" class="text-gray-400 hover:text-fire text-sm font-medium transition">← Back to Family Portal</a>
+        </div>
+    </div>
+</section>
+{% endblock %}

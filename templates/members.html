@@ -1,0 +1,358 @@
+{% extends "base.html" %}
+{% block title %}Member Portal · Local 3494{% endblock %}
+
+{% block content %}
+
+{% if not logged_in %}
+<section class="bg-navy py-12">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="text-fire font-heading font-semibold text-xs uppercase tracking-widest mb-2">Members Only</div>
+        <h1 class="font-heading font-bold text-3xl text-white">Member Portal</h1>
+    </div>
+</section>
+<div class="h-1 bg-gradient-to-r from-fire via-red-400 to-fire"></div>
+<section class="py-12 bg-gray-50">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="max-w-md mx-auto bg-white border border-gray-200 rounded-lg shadow-sm p-8 text-center">
+            <div class="w-14 h-14 bg-navy/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg class="w-7 h-7 text-navy" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+            </div>
+            <h2 class="font-heading font-bold text-navy text-lg mb-2">Members Only</h2>
+            <p class="text-gray-500 text-sm mb-6">Please sign in to access the member portal.</p>
+            <a href="/login" class="block bg-fire hover:bg-fire-dark text-white font-semibold py-2.5 px-6 rounded transition text-sm">Sign In</a>
+        </div>
+    </div>
+</section>
+
+{% else %}
+
+<!-- Dual Portal Header -->
+<section class="bg-navy py-10">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- Member Portal -->
+            <div class="border-2 border-white/20 rounded-xl p-8">
+                <div class="text-fire font-heading font-semibold text-xs uppercase tracking-widest mb-2">Members Only</div>
+                <h1 class="font-heading font-bold text-3xl text-white mb-2">Member Portal</h1>
+                <p class="text-gray-400 text-sm">Welcome back, <span class="text-white font-semibold">{{ username }}</span>
+                    {% if role == 'super_admin' %}<span class="ml-2 bg-fire text-white text-xs font-semibold px-2 py-0.5 rounded">🔑 Super Admin</span>
+                    {% elif role == 'admin' %}<span class="ml-2 bg-fire text-white text-xs font-semibold px-2 py-0.5 rounded">Admin</span>
+                    {% elif role == 'board_member' %}<span class="ml-2 bg-blue-600 text-white text-xs font-semibold px-2 py-0.5 rounded">Board Member</span>{% endif %}
+                </p>
+            </div>
+            <!-- Family Portal -->
+            <a href="/family" class="border-2 border-fire/50 hover:border-fire bg-fire/10 hover:bg-fire/20 rounded-xl p-8 transition group flex flex-col justify-between">
+                <div>
+                    <div class="text-fire font-heading font-semibold text-xs uppercase tracking-widest mb-2">Family Portal</div>
+                    <h2 class="font-heading font-bold text-3xl text-white mb-3">Family Section</h2>
+                    <p class="text-gray-300 text-sm">Events, discussions, photos, announcements, and more — for the whole family.</p>
+                </div>
+                <div class="mt-6">
+                    <span class="inline-flex items-center text-fire font-semibold text-sm group-hover:text-white transition">
+                        Enter Family Portal
+                        <svg class="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                    </span>
+                </div>
+            </a>
+        </div>
+    </div>
+</section>
+<div class="h-1 bg-gradient-to-r from-fire via-red-400 to-fire"></div>
+
+<section class="py-12 bg-gray-50">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+
+        <!-- Member Portal Navigation Tabs -->
+        <div class="bg-white border border-gray-200 rounded-lg mb-8 overflow-hidden">
+            <div class="flex flex-wrap border-b border-gray-200">
+                <a href="/members" class="px-6 py-3 font-semibold text-navy border-b-2 border-fire hover:bg-gray-50">
+                    🏠 Home
+                </a>
+                <a href="/members/events" class="px-6 py-3 font-semibold text-gray-600 hover:text-navy hover:bg-gray-50">
+                    🎯 Events
+                </a>
+                <a href="/members/store" class="px-6 py-3 font-semibold text-gray-600 hover:text-navy hover:bg-gray-50">
+                    🛍️ Store
+                </a>
+                <a href="/members/discussions" class="px-6 py-3 font-semibold text-gray-600 hover:text-navy hover:bg-gray-50">
+                    💬 Discussions
+                </a>
+                <a href="/members/chat" class="px-6 py-3 font-semibold text-gray-600 hover:text-navy hover:bg-gray-50">
+                    💬 Chat
+                </a>
+            </div>
+        </div>
+
+        <!-- Two-Column: Events + Shift Calendar -->
+        <div class="grid grid-cols-1 lg:grid-cols-5 gap-6 mb-8">
+
+            <!-- LEFT: Upcoming Events -->
+            <div class="lg:col-span-2 bg-white border border-gray-200 rounded-lg shadow-sm flex flex-col">
+                <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+                    <h2 class="font-heading font-bold text-navy text-lg">📅 Upcoming Events</h2>
+                    <a href="/members/events" class="text-fire text-sm font-semibold hover:underline">View All →</a>
+                </div>
+                <div class="divide-y divide-gray-100 flex-1">
+                    {% if upcoming_events %}
+                        {% for event in upcoming_events %}
+                        <div class="px-6 py-4">
+                            <div class="flex items-start gap-3">
+                                <div class="flex-shrink-0 text-center bg-navy rounded-lg px-3 py-2 min-w-[52px]">
+                                    <div class="text-white text-xs font-semibold uppercase">{%- set month_num = event.event_date[5:7] | int -%}{%- if month_num == 1 %}Jan{%- elif month_num == 2 %}Feb{%- elif month_num == 3 %}Mar{%- elif month_num == 4 %}Apr{%- elif month_num == 5 %}May{%- elif month_num == 6 %}Jun{%- elif month_num == 7 %}Jul{%- elif month_num == 8 %}Aug{%- elif month_num == 9 %}Sep{%- elif month_num == 10 %}Oct{%- elif month_num == 11 %}Nov{%- else %}Dec{%- endif %}</div>
+                                    <div class="text-white font-bold text-xl leading-tight">{{ event.event_date[8:10] | int }}</div>
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <h3 class="font-semibold text-navy text-sm leading-snug">{{ event.title }}</h3>
+                                    {% if event.location %}
+                                    <p class="text-gray-500 text-xs mt-0.5">📍 {{ event.location }}</p>
+                                    {% endif %}
+                                    {% if event.event_time %}
+                                    <p class="text-gray-500 text-xs">🕐 {{ event.event_time }}</p>
+                                    {% endif %}
+                                    {% if event.signup_enabled %}
+                                    <a href="/members/events" class="inline-block mt-1.5 text-xs text-fire font-semibold hover:underline">Sign Up →</a>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="px-6 py-10 text-center text-gray-400">
+                            <svg class="w-10 h-10 mx-auto mb-3 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                            <p class="text-sm">No upcoming events</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- RIGHT: Shift Calendar -->
+            <div class="lg:col-span-3 bg-white border border-gray-200 rounded-lg shadow-sm">
+                <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+                    <h2 class="font-heading font-bold text-navy text-lg">🔄 Shift Calendar</h2>
+                    <div class="flex items-center gap-2">
+                        <button id="mc-prev-month" class="p-1.5 rounded hover:bg-gray-100 transition text-navy">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+                        </button>
+                        <span id="mc-month-year" class="font-semibold text-navy text-sm min-w-[120px] text-center"></span>
+                        <button id="mc-next-month" class="p-1.5 rounded hover:bg-gray-100 transition text-navy">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                        </button>
+                    </div>
+                </div>
+                <div class="p-4">
+                    <!-- Legend -->
+                    <div class="flex gap-3 mb-3 text-xs">
+                        <span class="flex items-center gap-1"><span class="w-3 h-3 rounded bg-red-300 inline-block"></span>A Shift</span>
+                        <span class="flex items-center gap-1"><span class="w-3 h-3 rounded bg-blue-300 inline-block"></span>B Shift</span>
+                        <span class="flex items-center gap-1"><span class="w-3 h-3 rounded bg-green-300 inline-block"></span>C Shift</span>
+                    </div>
+                    <!-- Calendar Grid -->
+                    <div class="rounded border border-gray-200 overflow-hidden">
+                        <div class="grid grid-cols-7 bg-navy text-white text-xs font-semibold">
+                            <div class="p-1.5 text-center">Sun</div>
+                            <div class="p-1.5 text-center">Mon</div>
+                            <div class="p-1.5 text-center">Tue</div>
+                            <div class="p-1.5 text-center">Wed</div>
+                            <div class="p-1.5 text-center">Thu</div>
+                            <div class="p-1.5 text-center">Fri</div>
+                            <div class="p-1.5 text-center">Sat</div>
+                        </div>
+                        <div id="mc-calendar-grid" class="grid grid-cols-7 gap-px bg-gray-200">
+                            <!-- Populated by JS -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Portal Nav Cards -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+
+            <!-- Member Events & Signup -->
+            <a href="/members/events" class="bg-white border border-gray-200 hover:border-fire hover:shadow-md rounded-lg p-6 transition group">
+                <div class="w-10 h-10 bg-fire/10 rounded-lg flex items-center justify-center mb-4 group-hover:bg-fire/20 transition">
+                    <svg class="w-5 h-5 text-fire" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
+                </div>
+                <h3 class="font-heading font-bold text-navy mb-1">Member Events</h3>
+                <p class="text-gray-500 text-sm">Sign up and manage union events</p>
+            </a>
+
+            <!-- Member Store -->
+            <a href="/members/store" class="bg-white border border-gray-200 hover:border-fire hover:shadow-md rounded-lg p-6 transition group">
+                <div class="w-10 h-10 bg-fire/10 rounded-lg flex items-center justify-center mb-4 group-hover:bg-fire/20 transition">
+                    <svg class="w-5 h-5 text-fire" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/></svg>
+                </div>
+                <h3 class="font-heading font-bold text-navy mb-1">Member Store</h3>
+                <p class="text-gray-500 text-sm">Union gear with station pickup</p>
+            </a>
+
+            <!-- Discussions -->
+            <a href="/members/discussions" class="bg-white border border-gray-200 hover:border-fire hover:shadow-md rounded-lg p-6 transition group">
+                <div class="w-10 h-10 bg-fire/10 rounded-lg flex items-center justify-center mb-4 group-hover:bg-fire/20 transition">
+                    <svg class="w-5 h-5 text-fire" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                </div>
+                <h3 class="font-heading font-bold text-navy mb-1">Discussions</h3>
+                <p class="text-gray-500 text-sm">Post topics, ask questions, and discuss union matters with fellow members.</p>
+            </a>
+
+            <!-- Member Chat -->
+            <a href="/members/chat" class="bg-white border border-gray-200 hover:border-fire hover:shadow-md rounded-lg p-6 transition group">
+                <div class="w-10 h-10 bg-fire/10 rounded-lg flex items-center justify-center mb-4 group-hover:bg-fire/20 transition">
+                    <svg class="w-5 h-5 text-fire" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                </div>
+                <h3 class="font-heading font-bold text-navy mb-1">Member Chat</h3>
+                <p class="text-gray-500 text-sm">Connect with other members</p>
+            </a>
+
+            <!-- Family Management -->
+            <a href="/members/family" class="bg-white border border-gray-200 hover:border-fire hover:shadow-md rounded-lg p-6 transition group">
+                <div class="w-10 h-10 bg-fire/10 rounded-lg flex items-center justify-center mb-4 group-hover:bg-fire/20 transition">
+                    <svg class="w-5 h-5 text-fire" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.856-1.487M15 10a3 3 0 11-6 0 3 3 0 016 0zM6 20v-2a3 3 0 016 0v2H6z"/></svg>
+                </div>
+                <h3 class="font-heading font-bold text-navy mb-1">Family Members</h3>
+                <p class="text-gray-500 text-sm">Manage family member accounts</p>
+            </a>
+
+            <!-- Documents -->
+            <div class="bg-white border border-gray-200 rounded-lg p-6 relative">
+                <div class="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center mb-4">
+                    <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                </div>
+                <h3 class="font-heading font-bold text-navy mb-1">Documents</h3>
+                <p class="text-gray-500 text-sm mb-3">Contracts, policies &amp; resources</p>
+                <span class="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded font-semibold">Coming Soon</span>
+            </div>
+
+            {% if role in ['admin', 'super_admin'] %}
+            <!-- Admin Panel -->
+            <a href="/admin" class="bg-navy border border-navy hover:bg-navy-light rounded-lg p-6 transition group">
+                <div class="w-10 h-10 bg-white/10 rounded-lg flex items-center justify-center mb-4">
+                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                </div>
+                <h3 class="font-heading font-bold text-white mb-1">Admin Panel</h3>
+                <p class="text-gray-300 text-sm">Manage content &amp; members</p>
+            </a>
+            {% endif %}
+
+        </div>
+
+        <!-- Sign out -->
+        <div class="mt-10 text-center">
+            <a href="/logout" class="text-gray-400 hover:text-fire text-sm font-medium transition">Sign Out</a>
+        </div>
+
+    </div>
+</section>
+
+<script>
+// Events data from server
+const mcEventsData = {{ upcoming_events | tojson }};
+const mcEventsByDate = {};
+mcEventsData.forEach(function(e) {
+    var dateKey = (e.event_date || '').substring(0, 10);
+    if (!mcEventsByDate[dateKey]) mcEventsByDate[dateKey] = [];
+    mcEventsByDate[dateKey].push(e);
+});
+
+// Shift Schedule Configuration
+const MC_SHIFT_CONFIG = {
+    A: new Date(2026, 2, 2),
+    B: new Date(2026, 2, 4),
+    C: new Date(2026, 2, 6)
+};
+const MC_CYCLE_LENGTH = 6;
+
+function mcGetShift(date) {
+    // Use UTC to avoid DST issues (DST makes some days 23hrs, throwing off the cycle)
+    const refUTC = Date.UTC(2026, 2, 2);
+    const dateUTC = Date.UTC(date.getFullYear(), date.getMonth(), date.getDate());
+    const days = Math.round((dateUTC - refUTC) / 86400000);
+    const pos = ((days % MC_CYCLE_LENGTH) + MC_CYCLE_LENGTH) % MC_CYCLE_LENGTH;
+    if (pos < 2) return 'A';
+    if (pos < 4) return 'B';
+    return 'C';
+}
+
+function mcRenderCalendar(year, month) {
+    const monthNames = ['January','February','March','April','May','June',
+                        'July','August','September','October','November','December'];
+    document.getElementById('mc-month-year').textContent = `${monthNames[month]} ${year}`;
+
+    const firstDay = new Date(year, month, 1);
+    const startDate = new Date(firstDay);
+    startDate.setDate(startDate.getDate() - firstDay.getDay());
+
+    const grid = document.getElementById('mc-calendar-grid');
+    grid.innerHTML = '';
+
+    const today = new Date();
+    today.setHours(0,0,0,0);
+
+    for (let i = 0; i < 42; i++) {
+        const d = new Date(startDate);
+        d.setDate(startDate.getDate() + i);
+
+        const cell = document.createElement('div');
+        const inMonth = d.getMonth() === month;
+        const isToday = d.getTime() === today.getTime();
+
+        const shift = mcGetShift(d);
+        let bg = '';
+        if (inMonth) {
+            if (shift === 'A') bg = 'bg-red-50';
+            else if (shift === 'B') bg = 'bg-blue-50';
+            else bg = 'bg-green-50';
+        } else {
+            bg = 'bg-gray-50';
+        }
+
+        cell.className = `${bg} p-1.5 min-h-[52px] flex flex-col`;
+
+        const dayNum = document.createElement('div');
+        dayNum.className = `text-xs font-bold ${inMonth ? 'text-navy' : 'text-gray-300'} ${isToday ? 'bg-fire text-white rounded-full w-5 h-5 flex items-center justify-center' : ''}`;
+        dayNum.textContent = d.getDate();
+        cell.appendChild(dayNum);
+
+        if (inMonth) {
+            const badge = document.createElement('div');
+            badge.className = `text-xs font-semibold mt-0.5 ${shift === 'A' ? 'text-red-700' : shift === 'B' ? 'text-blue-700' : 'text-green-700'}`;
+            badge.textContent = shift;
+            cell.appendChild(badge);
+
+            // Show events for this day
+            const dateKey = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+            const dayEvents = mcEventsByDate[dateKey] || [];
+            dayEvents.forEach(function(ev) {
+                const evBadge = document.createElement('div');
+                evBadge.className = 'text-xs bg-navy text-white rounded px-1 py-0.5 mt-0.5 truncate leading-tight';
+                evBadge.textContent = '🎉 ' + ev.title;
+                evBadge.title = ev.title;
+                cell.appendChild(evBadge);
+            });
+        }
+
+        grid.appendChild(cell);
+    }
+}
+
+let mcCurrentDate = new Date();
+
+function mcRefresh() {
+    mcRenderCalendar(mcCurrentDate.getFullYear(), mcCurrentDate.getMonth());
+}
+
+document.getElementById('mc-prev-month').addEventListener('click', () => {
+    mcCurrentDate.setMonth(mcCurrentDate.getMonth() - 1);
+    mcRefresh();
+});
+document.getElementById('mc-next-month').addEventListener('click', () => {
+    mcCurrentDate.setMonth(mcCurrentDate.getMonth() + 1);
+    mcRefresh();
+});
+
+mcRefresh();
+</script>
+
+{% endif %}
+{% endblock %}

@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+{% block title %}Register for Family Portal · Local 3494{% endblock %}
+
+{% block content %}
+<section class="bg-navy py-12">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="text-fire font-heading font-semibold text-xs uppercase tracking-widest mb-2">Family Portal</div>
+        <h1 class="font-heading font-bold text-3xl text-white">Create Your Account</h1>
+        <p class="text-gray-400 mt-1">Join the Local 3494 Family Portal</p>
+    </div>
+</section>
+<div class="h-1 bg-gradient-to-r from-fire via-red-400 to-fire"></div>
+
+<section class="py-12 bg-gray-50">
+    <div class="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8">
+        
+        {% if error %}
+        <div class="bg-red-50 border border-red-200 rounded-lg p-4 mb-8">
+            <p class="text-red-800 font-semibold">{{ error }}</p>
+            <p class="text-red-700 text-sm mt-2">
+                <a href="/" class="underline hover:no-underline">Return to Home</a>
+            </p>
+        </div>
+        {% elif invitation %}
+        <div class="bg-white border border-gray-200 rounded-lg p-8">
+            <div class="text-center mb-8">
+                <svg class="w-12 h-12 text-fire mx-auto mb-4" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.973 0 004 15v3H1v-3a3 3 0 013.75-2.906z"/>
+                </svg>
+                <h2 class="font-heading font-bold text-2xl text-navy">Welcome to the Family Portal!</h2>
+            </div>
+            
+            <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-8">
+                <p class="text-blue-800 text-sm">
+                    <span class="font-semibold">You were invited by:</span><br>
+                    Please complete your registration to join the Local 3494 family community.
+                </p>
+            </div>
+            
+            <form method="POST" class="space-y-6">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div>
+                    <label for="name" class="block text-sm font-semibold text-navy mb-2">Full Name *</label>
+                    <input 
+                        type="text" 
+                        id="name" 
+                        name="name" 
+                        value="{{ invitation.invitee_name }}"
+                        placeholder="Full name..."
+                        class="w-full border border-gray-300 rounded px-4 py-2 text-sm focus:border-fire focus:outline-none focus:ring-1 focus:ring-fire"
+                    >
+                </div>
+
+                <div>
+                    <label for="email" class="block text-sm font-semibold text-navy mb-2">Email Address</label>
+                    <input 
+                        type="email" 
+                        id="email" 
+                        name="email" 
+                        value="{{ invitation.invitee_email }}"
+                        disabled
+                        class="w-full border border-gray-300 rounded px-4 py-2 text-sm bg-gray-100 text-gray-600 cursor-not-allowed"
+                    >
+                    <p class="text-xs text-gray-500 mt-1">This email is linked to your invitation and cannot be changed</p>
+                </div>
+
+                <div>
+                    <label for="password" class="block text-sm font-semibold text-navy mb-2">Password *</label>
+                    <input 
+                        type="password" 
+                        id="password" 
+                        name="password" 
+                        required
+                        placeholder="Create a strong password..."
+                        class="w-full border border-gray-300 rounded px-4 py-2 text-sm focus:border-fire focus:outline-none focus:ring-1 focus:ring-fire"
+                    >
+                    <p class="text-xs text-gray-500 mt-1">Minimum 6 characters</p>
+                </div>
+
+                <div>
+                    <label for="password_confirm" class="block text-sm font-semibold text-navy mb-2">Confirm Password *</label>
+                    <input 
+                        type="password" 
+                        id="password_confirm" 
+                        name="password_confirm" 
+                        required
+                        placeholder="Confirm your password..."
+                        class="w-full border border-gray-300 rounded px-4 py-2 text-sm focus:border-fire focus:outline-none focus:ring-1 focus:ring-fire"
+                    >
+                </div>
+
+                <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                    <p class="text-yellow-800 text-sm">
+                        <span class="font-semibold">Note:</span> Your account will be pending admin approval. You'll receive an email once it's activated.
+                    </p>
+                </div>
+
+                <button 
+                    type="submit" 
+                    class="w-full bg-fire hover:bg-fire-dark text-white font-semibold py-3 rounded transition text-sm font-heading"
+                >
+                    Create Account
+                </button>
+
+                <p class="text-center text-sm text-gray-600">
+                    Already have an account? <a href="/login" class="text-fire hover:underline font-semibold">Log in here</a>
+                </p>
+            </form>
+        </div>
+        {% endif %}
+
+    </div>
+</section>
+{% endblock %}

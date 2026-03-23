@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block title %}New Discussion · Local 3494{% endblock %}
+
+{% block content %}
+
+<!-- Page Banner -->
+<section class="bg-navy py-12">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <h1 class="font-heading font-bold text-4xl text-white">New Discussion</h1>
+    </div>
+</section>
+
+<!-- Fire Gradient Divider -->
+<div class="h-1 bg-gradient-to-r from-fire via-red-400 to-fire"></div>
+
+<!-- Form Section -->
+<section class="py-12 bg-gray-50 min-h-screen">
+    <div class="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="bg-white border border-gray-200 rounded-lg shadow-sm p-8">
+            <form method="POST" action="/members/discussions/new" class="space-y-6">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                
+                <!-- Category -->
+                <div>
+                    <label for="category_id" class="block font-semibold text-navy text-sm mb-2">Category</label>
+                    <select id="category_id" name="category_id" required class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-fire">
+                        <option value="">Select a category...</option>
+                        {% for cat in categories %}
+                        <option value="{{ cat.id }}">{{ cat.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <!-- Title -->
+                <div>
+                    <label for="title" class="block font-semibold text-navy text-sm mb-2">Title</label>
+                    <input type="text" id="title" name="title" required maxlength="200" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-fire" placeholder="What's your discussion about?">
+                </div>
+                
+                <!-- Body -->
+                <div>
+                    <label for="body" class="block font-semibold text-navy text-sm mb-2">Message</label>
+                    <textarea id="body" name="body" required rows="8" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-fire" placeholder="Share your thoughts..."></textarea>
+                </div>
+                
+                <!-- Buttons -->
+                <div class="flex gap-3">
+                    <button type="submit" class="bg-fire hover:bg-red-700 text-white font-semibold py-2.5 px-6 rounded transition">
+                        Post Discussion
+                    </button>
+                    <a href="/members/discussions" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-semibold py-2.5 px-6 rounded transition">
+                        Cancel
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+</section>
+
+{% endblock %}

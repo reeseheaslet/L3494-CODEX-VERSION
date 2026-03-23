@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% block title %}{{ post.title }} · Local 3494{% endblock %}
+
+{% block content %}
+
+<!-- Page Banner -->
+<section class="bg-navy py-12">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <h1 class="font-heading font-bold text-3xl text-white mb-3">{{ post.title }}</h1>
+        <div class="flex flex-wrap items-center gap-4 text-gray-300 text-sm">
+            <span>{{ post.category_name }}</span>
+            <span class="text-gray-500">•</span>
+            <span>by {{ post.author_name or 'Anonymous' }}</span>
+            <span class="text-gray-500">•</span>
+            <span>{{ post.created_at[:10] }}</span>
+        </div>
+    </div>
+</section>
+
+<!-- Fire Gradient Divider -->
+<div class="h-1 bg-gradient-to-r from-fire via-red-400 to-fire"></div>
+
+<!-- Main Content -->
+<section class="py-12 bg-gray-50 min-h-screen">
+    <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
+        
+        <!-- Original Post -->
+        <div class="bg-white border border-gray-200 rounded-lg shadow-sm p-6 mb-8 whitespace-pre-wrap text-gray-700">
+            {{ post.body }}
+        </div>
+        
+        <!-- Comments Section Heading -->
+        <h2 class="font-heading font-bold text-navy text-lg mb-4">
+            Replies ({{ comments|length }})
+        </h2>
+        
+        <!-- Comments -->
+        {% if comments %}
+            <div class="space-y-4 mb-8">
+                {% for comment in comments %}
+                <div class="bg-gray-50 border-l-4 border-fire rounded-lg p-4">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="font-semibold text-gray-700">{{ comment.author_name or 'Anonymous' }}</span>
+                        <span class="text-gray-500 text-sm">{{ comment.created_at[:10] }}</span>
+                    </div>
+                    <p class="text-gray-600 whitespace-pre-wrap">{{ comment.body }}</p>
+                </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="bg-white border border-gray-200 rounded-lg p-6 mb-8 text-center">
+                <p class="text-gray-500">No replies yet — be the first!</p>
+            </div>
+        {% endif %}
+        
+        <!-- Reply Form -->
+        <div class="bg-white border border-gray-200 rounded-lg shadow-sm p-6">
+            <h3 class="font-heading font-bold text-navy text-base mb-4">Post a Reply</h3>
+            <form method="POST" action="/members/discussions/post/{{ post.id }}/comment" class="space-y-4">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                
+                <div>
+                    <textarea name="body" required rows="4" maxlength="5000" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-fire" placeholder="Write your reply..."></textarea>
+                </div>
+                
+                <div>
+                    <button type="submit" class="bg-fire hover:bg-red-700 text-white font-semibold py-2.5 px-6 rounded transition">
+                        Post Reply
+                    </button>
+                </div>
+            </form>
+        </div>
+        
+        <!-- Back Link -->
+        <div class="mt-8 text-center">
+            <a href="/members/discussions" class="text-fire hover:text-red-700 font-semibold text-sm">
+                ← Back to Discussions
+            </a>
+        </div>
+    </div>
+</section>
+
+{% endblock %}

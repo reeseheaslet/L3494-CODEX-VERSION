@@ -1,0 +1,670 @@
+{% extends "base.html" %}
+{% block title %}Admin Dashboard · Local 3494{% endblock %}
+
+{% block content %}
+<section class="bg-navy py-12">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="text-fire font-heading font-semibold text-xs uppercase tracking-widest mb-2">Administration</div>
+        <h1 class="font-heading font-bold text-3xl text-white">Admin Dashboard</h1>
+        <p class="text-gray-400 mt-1">Welcome, <span class="text-white font-semibold">{{ username }}</span></p>
+    </div>
+</section>
+<div class="h-1 bg-gradient-to-r from-fire via-red-400 to-fire"></div>
+
+<section class="py-8 bg-gray-50">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        
+        <!-- Tab Navigation -->
+        <div class="mb-8 border-b border-gray-200 bg-white rounded-t-lg">
+            <div class="flex flex-wrap gap-0">
+                <button class="tab-btn active px-4 py-3 text-sm font-semibold border-b-2 border-fire text-fire transition" data-tab="members">
+                    👥 Members
+                </button>
+                {% if pending_members %}
+                <button class="tab-btn px-4 py-3 text-sm font-semibold border-b-2 border-transparent text-gray-600 hover:text-gray-900 transition" data-tab="pending">
+                    ⏳ Pending Approval ({{ pending_members|length }})
+                </button>
+                {% endif %}
+                <button class="tab-btn px-4 py-3 text-sm font-semibold border-b-2 border-transparent text-gray-600 hover:text-gray-900 transition" data-tab="orders">
+                    📦 Store Orders
+                </button>
+                <button class="tab-btn px-4 py-3 text-sm font-semibold border-b-2 border-transparent text-gray-600 hover:text-gray-900 transition" data-tab="events">
+                    📅 Events
+                </button>
+                <button class="tab-btn px-4 py-3 text-sm font-semibold border-b-2 border-transparent text-gray-600 hover:text-gray-900 transition" data-tab="bulletin">
+                    📢 Bulletin
+                </button>
+                <button class="tab-btn px-4 py-3 text-sm font-semibold border-b-2 border-transparent text-gray-600 hover:text-gray-900 transition" data-tab="photos">
+                    📸 Photos
+                    {% if pending_photos > 0 %}
+                    <span class="ml-2 inline-flex items-center justify-center w-5 h-5 bg-red-500 text-white text-xs font-bold rounded-full">{{ pending_photos }}</span>
+                    {% endif %}
+                </button>
+                <button class="tab-btn px-4 py-3 text-sm font-semibold border-b-2 border-transparent text-gray-600 hover:text-gray-900 transition" data-tab="messages">
+                    Messages
+                    {% if unread_contact_count > 0 %}<span class="ml-1.5 bg-fire text-white text-xs font-bold rounded-full px-1.5 py-0.5">{{ unread_contact_count }}</span>{% endif %}
+                </button>
+            </div>
+        </div>
+
+        <!-- TAB: Members Management -->
+        <div id="members" class="tab-content block bg-white rounded-b-lg shadow-sm p-6 mb-6">
+            <h2 class="font-heading font-bold text-xl text-navy mb-4">Members Management</h2>
+            
+            <!-- Search -->
+            <div class="mb-6">
+                <input type="text" id="members-search" placeholder="Search by name or email..." 
+                    class="w-full px-4 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-fire/30 focus:border-fire">
+            </div>
+
+            <!-- Members Table -->
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead>
+                        <tr class="bg-gray-50 border-b border-gray-200">
+                            <th class="px-4 py-3 text-left font-semibold text-gray-700">Name</th>
+                            <th class="px-4 py-3 text-left font-semibold text-gray-700">Email</th>
+                            <th class="px-4 py-3 text-left font-semibold text-gray-700">Role</th>
+                            <th class="px-4 py-3 text-left font-semibold text-gray-700">Status</th>
+                            <th class="px-4 py-3 text-left font-semibold text-gray-700">Joined</th>
+                            <th class="px-4 py-3 text-center font-semibold text-gray-700">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for member in members %}
+                        <tr class="border-b border-gray-200 hover:bg-gray-50 transition member-row" data-name="{{ member.name.lower() }}" data-email="{{ member.email.lower() }}">
+                            <td class="px-4 py-3 font-medium text-gray-900">{{ member.name }}</td>
+                            <td class="px-4 py-3 text-gray-600">
+                                {{ member.email }}
+                                {% if member.role == 'family' and member.linked_member_name %}
+                                    <div class="text-xs text-blue-600 mt-0.5">👨‍🚒 Related to {{ member.linked_member_name }}</div>
+                                {% endif %}
+                            </td>
+                            <td class="px-4 py-3">
+                                {% if is_super_admin %}
+                                    <form method="POST" action="/admin/members/role" class="flex gap-2">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                        <input type="hidden" name="member_id" value="{{ member.id }}">
+                                        <select name="role" class="px-2 py-1 border border-gray-300 rounded text-xs focus:outline-none focus:ring-2 focus:ring-fire/30">
+                                            <option value="member" {% if member.role == 'member' %}selected{% endif %}>Member</option>
+                                            <option value="family" {% if member.role == 'family' %}selected{% endif %}>Family Member</option>
+                                            <option value="board_member" {% if member.role == 'board_member' %}selected{% endif %}>Board Member</option>
+                                            <option value="admin" {% if member.role == 'admin' %}selected{% endif %}>Admin</option>
+                                            <option value="super_admin" {% if member.role == 'super_admin' %}selected{% endif %}>Super Admin</option>
+                                        </select>
+                                        <button type="submit" class="px-3 py-1 bg-navy text-white rounded text-xs font-semibold hover:bg-navy-dark transition">Save</button>
+                                    </form>
+                                {% else %}
+                                    <span class="px-3 py-1 bg-gray-100 text-gray-700 rounded text-xs font-semibold">
+                                        {% if member.role == 'super_admin' %}Super Admin
+                                        {% elif member.role == 'admin' %}Admin
+                                        {% elif member.role == 'board_member' %}Board Member
+                                        {% elif member.role == 'family' %}Family Member
+                                        {% else %}Member{% endif %}
+                                    </span>
+                                {% endif %}
+                            </td>
+                            <td class="px-4 py-3">
+                                <span class="px-2 py-1 rounded text-xs font-semibold
+                                    {% if member.status == 'active' %}bg-green-100 text-green-800
+                                    {% elif member.status == 'pending' %}bg-yellow-100 text-yellow-800
+                                    {% else %}bg-red-100 text-red-800{% endif %}">
+                                    {{ member.status|title }}
+                                </span>
+                            </td>
+                            <td class="px-4 py-3 text-gray-600 text-xs">{{ member.created_at[:10] if member.created_at else 'N/A' }}</td>
+                            <td class="px-4 py-3 text-center">
+                                <div class="flex gap-1 justify-center flex-wrap">
+                                    {% if member.status == 'pending' %}
+                                        <form method="POST" action="/admin/members/approve" style="display:inline">
+                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                            <input type="hidden" name="member_id" value="{{ member.id }}">
+                                            <input type="hidden" name="action" value="approve">
+                                            <button type="submit" class="px-3 py-1 bg-green-600 text-white rounded text-xs font-semibold hover:bg-green-700 transition">Approve</button>
+                                        </form>
+                                        <form method="POST" action="/admin/members/approve" style="display:inline">
+                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                            <input type="hidden" name="member_id" value="{{ member.id }}">
+                                            <input type="hidden" name="action" value="suspend">
+                                            <button type="submit" class="px-3 py-1 bg-red-600 text-white rounded text-xs font-semibold hover:bg-red-700 transition">Deny</button>
+                                        </form>
+                                        {% if is_super_admin %}
+                                        <form method="POST" action="/admin/members/delete" style="display:inline" onsubmit="return confirm('Permanently delete {{ member.name }}? This cannot be undone.')">
+                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                            <input type="hidden" name="member_id" value="{{ member.id }}">
+                                            <button type="submit" class="px-3 py-1 bg-red-800 text-white rounded text-xs font-semibold hover:bg-red-900 transition">Delete</button>
+                                        </form>
+                                        {% endif %}
+                                    {% elif member.status == 'active' %}
+                                        <form method="POST" action="/admin/members/approve" style="display:inline">
+                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                            <input type="hidden" name="member_id" value="{{ member.id }}">
+                                            <input type="hidden" name="action" value="suspend">
+                                            <button type="submit" class="px-3 py-1 bg-gray-400 text-white rounded text-xs font-semibold hover:bg-gray-500 transition">Suspend</button>
+                                        </form>
+                                        {% if is_super_admin %}
+                                        <form method="POST" action="/admin/members/delete" style="display:inline" onsubmit="return confirm('Permanently delete {{ member.name }}? This cannot be undone.')">
+                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                            <input type="hidden" name="member_id" value="{{ member.id }}">
+                                            <button type="submit" class="px-3 py-1 bg-red-800 text-white rounded text-xs font-semibold hover:bg-red-900 transition">Delete</button>
+                                        </form>
+                                        {% endif %}
+                                    {% else %}
+                                        <form method="POST" action="/admin/members/approve" style="display:inline">
+                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                            <input type="hidden" name="member_id" value="{{ member.id }}">
+                                            <input type="hidden" name="action" value="approve">
+                                            <button type="submit" class="px-3 py-1 bg-green-600 text-white rounded text-xs font-semibold hover:bg-green-700 transition">Re-Activate</button>
+                                        </form>
+                                        {% if is_super_admin %}
+                                        <form method="POST" action="/admin/members/delete" style="display:inline" onsubmit="return confirm('Permanently delete {{ member.name }}? This cannot be undone.')">
+                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                            <input type="hidden" name="member_id" value="{{ member.id }}">
+                                            <button type="submit" class="px-3 py-1 bg-red-800 text-white rounded text-xs font-semibold hover:bg-red-900 transition">Delete</button>
+                                        </form>
+                                        {% endif %}
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- TAB: Pending Approvals -->
+        {% if pending_members %}
+        <div id="pending" class="tab-content hidden bg-white rounded-b-lg shadow-sm p-6 mb-6">
+            <h2 class="font-heading font-bold text-xl text-navy mb-4">Pending Member Approvals</h2>
+            
+            {% if pending_members %}
+            <div class="space-y-4">
+                {% for member in pending_members %}
+                <div class="border border-yellow-200 bg-yellow-50 rounded-lg p-4">
+                    <div class="flex justify-between items-start mb-3">
+                        <div>
+                            <h3 class="font-semibold text-gray-900">{{ member.name }}</h3>
+                            <p class="text-sm text-gray-600">{{ member.email }}</p>
+                            {% if member.badge_number %}
+                            <p class="text-sm text-gray-600">Badge: {{ member.badge_number }}</p>
+                            {% endif %}
+                            <p class="text-xs text-gray-500 mt-1">Applied: {{ member.created_at[:10] if member.created_at else 'N/A' }}</p>
+                        </div>
+                        <div class="flex gap-2">
+                            <form method="POST" action="/admin/members/approve" style="display: inline;">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <input type="hidden" name="member_id" value="{{ member.id }}">
+                                <input type="hidden" name="action" value="approve">
+                                <button type="submit" class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded text-sm font-semibold transition">Approve</button>
+                            </form>
+                            <form method="POST" action="/admin/members/approve" style="display: inline;">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <input type="hidden" name="member_id" value="{{ member.id }}">
+                                <input type="hidden" name="action" value="suspend">
+                                <button type="submit" class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded text-sm font-semibold transition">Suspend</button>
+                            </form>
+                            {% if is_super_admin %}
+                            <form method="POST" action="/admin/members/delete" style="display: inline;" onsubmit="return confirm('Permanently delete {{ member.name }}? This cannot be undone.')">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <input type="hidden" name="member_id" value="{{ member.id }}">
+                                <button type="submit" class="px-4 py-2 bg-red-800 hover:bg-red-900 text-white rounded text-sm font-semibold transition">Delete</button>
+                            </form>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        <!-- TAB: Store Orders -->
+        <div id="orders" class="tab-content hidden bg-white rounded-b-lg shadow-sm p-6 mb-6">
+            <h2 class="font-heading font-bold text-xl text-navy mb-4">Store Orders</h2>
+            
+            {% if orders %}
+            <div class="mb-4 p-4 bg-navy-xdark rounded-lg text-white">
+                <div class="text-sm text-gray-300">Total Revenue (Fulfilled Orders)</div>
+                <div class="text-3xl font-bold">${{ "%.2f"|format(total_revenue) }}</div>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead>
+                        <tr class="bg-gray-50 border-b border-gray-200">
+                            <th class="px-4 py-3 text-left font-semibold text-gray-700">Order ID</th>
+                            <th class="px-4 py-3 text-left font-semibold text-gray-700">Item</th>
+                            <th class="px-4 py-3 text-left font-semibold text-gray-700">Size/Qty</th>
+                            <th class="px-4 py-3 text-left font-semibold text-gray-700">Customer</th>
+                            <th class="px-4 py-3 text-left font-semibold text-gray-700">Payment</th>
+                            <th class="px-4 py-3 text-left font-semibold text-gray-700">Price</th>
+                            <th class="px-4 py-3 text-left font-semibold text-gray-700">Status</th>
+                            <th class="px-4 py-3 text-left font-semibold text-gray-700">Date</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for order in orders %}
+                        <tr class="border-b border-gray-200 hover:bg-gray-50 transition">
+                            <td class="px-4 py-3 font-medium text-gray-900">#{{ order.id }}</td>
+                            <td class="px-4 py-3 text-gray-600">{{ order.item_name }}</td>
+                            <td class="px-4 py-3 text-gray-600">
+                                {% if order.size %}{{ order.size }} / {% endif %}{{ order.quantity }}x
+                            </td>
+                            <td class="px-4 py-3">
+                                <div class="text-gray-900 font-medium">{{ order.customer_name }}</div>
+                                <div class="text-xs text-gray-500">{{ order.customer_email }}</div>
+                            </td>
+                            <td class="px-4 py-3 text-gray-600 text-xs">{{ order.payment_method }}</td>
+                            <td class="px-4 py-3 font-semibold text-navy">${{ "%.2f"|format(order.price) }}</td>
+                            <td class="px-4 py-3">
+                                <form method="POST" action="/admin/store/orders" class="flex gap-1">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <input type="hidden" name="order_id" value="{{ order.id }}">
+                                    <select name="status" class="px-2 py-1 border border-gray-300 rounded text-xs focus:outline-none focus:ring-2 focus:ring-fire/30"
+                                        onchange="this.form.submit()">
+                                        <option value="pending" {% if order.order_status == 'pending' %}selected{% endif %}>Pending</option>
+                                        <option value="paid" {% if order.order_status == 'paid' %}selected{% endif %}>Paid</option>
+                                        <option value="fulfilled" {% if order.order_status == 'fulfilled' %}selected{% endif %}>Fulfilled</option>
+                                    </select>
+                                </form>
+                            </td>
+                            <td class="px-4 py-3 text-gray-600 text-xs">{{ order.created_at[:10] if order.created_at else 'N/A' }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="p-8 text-center text-gray-500">
+                No orders yet.
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- TAB: Events Management -->
+        <div id="events" class="tab-content hidden bg-white rounded-b-lg shadow-sm p-6 mb-6">
+            <h2 class="font-heading font-bold text-xl text-navy mb-4">Events Management</h2>
+            
+            {% if events %}
+            <div class="space-y-4">
+                {% for event in events %}
+                <div class="border border-gray-200 rounded-lg p-4 hover:shadow-md transition">
+                    <div class="flex justify-between items-start mb-3">
+                        <div class="flex-1">
+                            <h3 class="font-semibold text-gray-900">{{ event.title }}</h3>
+                            <div class="grid grid-cols-2 gap-2 text-sm text-gray-600 mt-2">
+                                <div>📅 {{ event.event_date }}</div>
+                                <div>⏰ {{ event.event_time or 'TBD' }}</div>
+                                <div>📍 {{ event.location }}</div>
+                                <div>
+                                    {% if event.event_type == 'public' %}
+                                        <span class="px-2 py-0.5 bg-blue-100 text-blue-800 rounded text-xs font-semibold">Public</span>
+                                    {% else %}
+                                        <span class="px-2 py-0.5 bg-navy/10 text-navy rounded text-xs font-semibold">Members Only</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            
+                            <!-- Signups List -->
+                            {% if event.signups %}
+                            <div class="mt-3 pt-3 border-t border-gray-100">
+                                <div class="text-xs font-semibold text-navy uppercase mb-2">Signups ({{ event.signups|length }})</div>
+                                <div class="space-y-1">
+                                    {% for signup in event.signups %}
+                                    <div class="text-xs text-gray-600">
+                                        <span class="font-medium">{{ signup.name }}</span>
+                                        {% if signup.note %}
+                                            <span class="text-gray-500 italic">— {{ signup.note }}</span>
+                                        {% endif %}
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            {% endif %}
+                        </div>
+                        <div class="flex gap-2">
+                            <!-- Edit Button -->
+                            <button class="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded text-sm font-semibold transition edit-event-btn" data-event-id="{{ event.id }}" data-event="{{ event|tojson }}">Edit</button>
+                            
+                            <!-- Delete Button -->
+                            <form method="POST" action="/admin/events/delete" style="display: inline;" onsubmit="return confirm('Delete this event?');">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <input type="hidden" name="event_id" value="{{ event.id }}">
+                                <button type="submit" class="px-3 py-2 bg-red-600 hover:bg-red-700 text-white rounded text-sm font-semibold transition">Delete</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="p-8 text-center text-gray-500">
+                No events yet.
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- TAB: Bulletin Board Management -->
+        <div id="bulletin" class="tab-content hidden bg-white rounded-b-lg shadow-sm p-6 mb-6">
+            <h2 class="font-heading font-bold text-xl text-navy mb-4">Bulletin Board Management</h2>
+            
+            {% if posts %}
+            <div class="space-y-4">
+                {% for post in posts %}
+                <div class="border {% if post.pinned %}border-fire bg-fire/5{% else %}border-gray-200{% endif %} rounded-lg p-4 hover:shadow-md transition">
+                    <div class="flex justify-between items-start mb-3">
+                        <div class="flex-1">
+                            <div class="flex items-center gap-2">
+                                <h3 class="font-semibold text-gray-900">{{ post.title }}</h3>
+                                {% if post.pinned %}
+                                <span class="px-2 py-0.5 bg-fire text-white rounded text-xs font-semibold">📌 Pinned</span>
+                                {% endif %}
+                            </div>
+                            <p class="text-sm text-gray-600 mt-1">By {{ post.author_name or 'Anonymous' }} • {{ post.created_at[:10] if post.created_at else 'N/A' }}</p>
+                            <p class="text-sm text-gray-700 mt-2 line-clamp-2">{{ post.content }}</p>
+                        </div>
+                        <div class="flex gap-2">
+                            <!-- Pin/Unpin Button -->
+                            <form method="POST" action="/admin/bulletin/pin" style="display: inline;">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <input type="hidden" name="post_id" value="{{ post.id }}">
+                                <button type="submit" class="px-3 py-2 {% if post.pinned %}bg-gray-400 hover:bg-gray-500{% else %}bg-yellow-600 hover:bg-yellow-700{% endif %} text-white rounded text-sm font-semibold transition">
+                                    {% if post.pinned %}Unpin{% else %}Pin{% endif %}
+                                </button>
+                            </form>
+                            
+                            <!-- Delete Button -->
+                            <form method="POST" action="/admin/bulletin/delete" style="display: inline;" onsubmit="return confirm('Delete this post?');">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <input type="hidden" name="post_id" value="{{ post.id }}">
+                                <button type="submit" class="px-3 py-2 bg-red-600 hover:bg-red-700 text-white rounded text-sm font-semibold transition">Delete</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="p-8 text-center text-gray-500">
+                No bulletin posts yet.
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- TAB: Photos Management -->
+        <div id="photos" class="tab-content hidden bg-white rounded-b-lg shadow-sm p-6 mb-6">
+            <h2 class="font-heading font-bold text-xl text-navy mb-4">Photo Management</h2>
+            
+            <div class="space-y-4">
+                <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <p class="text-blue-800 text-sm mb-3">
+                        <strong>Photo Moderation:</strong> Manage family photo uploads and approve/reject submissions.
+                    </p>
+                    <div class="flex gap-3">
+                        <a href="/admin/photos/queue" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded font-semibold transition text-sm flex items-center gap-2">
+                            📋 Review Queue
+                            {% if pending_photos > 0 %}
+                            <span class="ml-1 px-2 py-0.5 bg-red-500 rounded-full text-xs font-bold">{{ pending_photos }}</span>
+                            {% endif %}
+                        </a>
+                        <a href="/admin/photos/albums" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded font-semibold transition text-sm">
+                            🗂️ Manage Albums
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Messages Tab -->
+        <div id="messages" class="tab-content hidden bg-white rounded-b-lg shadow-sm p-6 mb-6">
+            <h2 class="font-heading font-bold text-navy text-lg mb-4">Contact Messages</h2>
+            {% if contact_messages %}
+            <div class="space-y-4">
+                {% for msg in contact_messages %}
+                <div class="border border-gray-200 rounded-lg overflow-hidden">
+                    <div class="flex items-center justify-between px-5 py-3 bg-gray-50 border-b border-gray-200 cursor-pointer" onclick="toggleMsg({{ msg.id }})">
+                        <div class="flex items-center gap-3">
+                            {% if msg.status == 'new' %}
+                            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-fire text-white">New</span>
+                            {% elif msg.status == 'in_progress' %}
+                            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-yellow-100 text-yellow-800">In Progress</span>
+                            {% else %}
+                            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-green-100 text-green-800">Closed</span>
+                            {% endif %}
+                            <span class="font-semibold text-navy text-sm">{{ msg.name }}</span>
+                            {% if msg.subject %}<span class="text-gray-500 text-sm">— {{ msg.subject }}</span>{% endif %}
+                        </div>
+                        <span class="text-gray-400 text-xs">{{ msg.created_at[:16] }}</span>
+                    </div>
+                    <div id="msg-{{ msg.id }}" class="hidden px-5 py-4">
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4 text-sm">
+                            <div><span class="font-semibold text-navy">Email:</span> <a href="mailto:{{ msg.email }}" class="text-fire hover:underline">{{ msg.email }}</a></div>
+                            <div><span class="font-semibold text-navy">Phone:</span> {{ msg.phone or '—' }}</div>
+                            <div><span class="font-semibold text-navy">Prefers:</span> {{ msg.preferred_contact | title }}</div>
+                        </div>
+                        <div class="bg-gray-50 rounded p-4 text-sm text-gray-700 mb-4 whitespace-pre-wrap">{{ msg.message }}</div>
+                        <div class="flex gap-2">
+                            {% if msg.status != 'in_progress' %}
+                            <form method="POST" action="/admin/messages/{{ msg.id }}/status" class="inline">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <input type="hidden" name="status" value="in_progress">
+                                <button type="submit" class="px-3 py-1.5 bg-yellow-100 hover:bg-yellow-200 text-yellow-800 text-xs font-semibold rounded transition">Mark In Progress</button>
+                            </form>
+                            {% endif %}
+                            {% if msg.status != 'closed' %}
+                            <form method="POST" action="/admin/messages/{{ msg.id }}/status" class="inline">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <input type="hidden" name="status" value="closed">
+                                <button type="submit" class="px-3 py-1.5 bg-green-100 hover:bg-green-200 text-green-800 text-xs font-semibold rounded transition">Mark Closed</button>
+                            </form>
+                            {% endif %}
+                            {% if msg.status == 'closed' %}
+                            <form method="POST" action="/admin/messages/{{ msg.id }}/status" class="inline">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <input type="hidden" name="status" value="new">
+                                <button type="submit" class="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-semibold rounded transition">Reopen</button>
+                            </form>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <p class="text-gray-500 text-sm">No messages yet.</p>
+            {% endif %}
+        </div>
+
+    </div>
+</section>
+
+<!-- Event Edit Modal -->
+<div id="event-modal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-lg shadow-lg max-w-md w-full">
+        <div class="bg-navy px-6 py-4">
+            <h3 class="text-white font-heading font-bold">Edit Event</h3>
+        </div>
+        <form method="POST" action="/admin/events/edit" class="p-6 space-y-4">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="event_id" id="modal-event-id" value="">
+            
+            <div>
+                <label class="block text-xs font-semibold text-gray-600 uppercase mb-2">Title</label>
+                <input type="text" name="title" id="modal-title" required class="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-fire/30">
+            </div>
+            
+            <div>
+                <label class="block text-xs font-semibold text-gray-600 uppercase mb-2">Date</label>
+                <input type="date" name="event_date" id="modal-date" required class="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-fire/30">
+            </div>
+            
+            <div>
+                <label class="block text-xs font-semibold text-gray-600 uppercase mb-2">Time</label>
+                <input type="time" name="event_time" id="modal-time" class="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-fire/30">
+            </div>
+            
+            <div>
+                <label class="block text-xs font-semibold text-gray-600 uppercase mb-2">Location</label>
+                <input type="text" name="location" id="modal-location" required class="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-fire/30">
+            </div>
+            
+            <div>
+                <label class="block text-xs font-semibold text-gray-600 uppercase mb-2">Description</label>
+                <textarea name="description" id="modal-description" rows="3" class="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-fire/30"></textarea>
+            </div>
+            
+            <div>
+                <label class="block text-xs font-semibold text-gray-600 uppercase mb-2">Type</label>
+                <select name="event_type" id="modal-type" class="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-fire/30">
+                    <option value="member">Members Only</option>
+                    <option value="public">Public</option>
+                </select>
+            </div>
+            
+            <div>
+                <label class="block text-xs font-semibold text-gray-600 uppercase mb-2">Visibility Targets</label>
+                <div class="space-y-2">
+                    <label class="flex items-center gap-2">
+                        <input type="checkbox" name="visibility_public_homepage" id="modal-visibility-public" class="w-4 h-4">
+                        <span class="text-sm text-gray-700">Public Homepage</span>
+                    </label>
+                    <label class="flex items-center gap-2">
+                        <input type="checkbox" name="visibility_member_portal" id="modal-visibility-member" class="w-4 h-4">
+                        <span class="text-sm text-gray-700">Member Portal</span>
+                    </label>
+                    <label class="flex items-center gap-2">
+                        <input type="checkbox" name="visibility_family_section" id="modal-visibility-family" class="w-4 h-4">
+                        <span class="text-sm text-gray-700">Family Section</span>
+                    </label>
+                </div>
+            </div>
+            
+            <label class="flex items-center gap-2">
+                <input type="checkbox" name="signup_enabled" id="modal-signup" class="w-4 h-4">
+                <span class="text-sm text-gray-700">Enable sign-ups</span>
+            </label>
+            
+            <div class="flex gap-2 pt-4">
+                <button type="submit" class="flex-1 px-4 py-2 bg-navy text-white rounded font-semibold hover:bg-navy-dark transition">Save Changes</button>
+                <button type="button" class="flex-1 px-4 py-2 bg-gray-200 text-gray-800 rounded font-semibold hover:bg-gray-300 transition close-modal">Cancel</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    // Tab switching
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const tabName = this.getAttribute('data-tab');
+            
+            // Hide all tabs
+            document.querySelectorAll('.tab-content').forEach(tab => tab.classList.add('hidden'));
+            
+            // Remove active state from all buttons
+            document.querySelectorAll('.tab-btn').forEach(b => {
+                b.classList.remove('border-fire', 'text-fire');
+                b.classList.add('border-transparent', 'text-gray-600');
+            });
+            
+            // Show selected tab
+            document.getElementById(tabName).classList.remove('hidden');
+            
+            // Set active state
+            this.classList.add('border-fire', 'text-fire');
+            this.classList.remove('border-transparent', 'text-gray-600');
+        });
+    });
+    
+    // Members search
+    document.getElementById('members-search').addEventListener('keyup', function() {
+        const searchTerm = this.value.toLowerCase();
+        document.querySelectorAll('.member-row').forEach(row => {
+            const name = row.getAttribute('data-name');
+            const email = row.getAttribute('data-email');
+            if (name.includes(searchTerm) || email.includes(searchTerm)) {
+                row.style.display = '';
+            } else {
+                row.style.display = 'none';
+            }
+        });
+    });
+    
+    // Edit event modal
+    document.querySelectorAll('.edit-event-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const eventData = JSON.parse(this.getAttribute('data-event'));
+            
+            document.getElementById('modal-event-id').value = eventData.id;
+            document.getElementById('modal-title').value = eventData.title;
+            document.getElementById('modal-date').value = eventData.event_date;
+            document.getElementById('modal-time').value = eventData.event_time || '';
+            document.getElementById('modal-location').value = eventData.location;
+            document.getElementById('modal-description').value = eventData.description || '';
+            document.getElementById('modal-type').value = eventData.event_type;
+            document.getElementById('modal-signup').checked = eventData.signup_enabled ? true : false;
+            
+            // Handle visibility checkboxes (comma-separated string)
+            document.getElementById('modal-visibility-public').checked = false;
+            document.getElementById('modal-visibility-member').checked = false;
+            document.getElementById('modal-visibility-family').checked = false;
+            
+            if (eventData.visibility) {
+                const visibility = eventData.visibility;
+                if (visibility.includes('public_homepage')) {
+                    document.getElementById('modal-visibility-public').checked = true;
+                }
+                if (visibility.includes('member_portal')) {
+                    document.getElementById('modal-visibility-member').checked = true;
+                }
+                if (visibility.includes('family_section')) {
+                    document.getElementById('modal-visibility-family').checked = true;
+                }
+            }
+            
+            document.getElementById('event-modal').classList.remove('hidden');
+        });
+    });
+    
+    // Close modal
+    document.querySelectorAll('.close-modal').forEach(btn => {
+        btn.addEventListener('click', function() {
+            document.getElementById('event-modal').classList.add('hidden');
+        });
+    });
+    
+    function toggleMsg(id) {
+        const el = document.getElementById('msg-' + id);
+        el.classList.toggle('hidden');
+    }
+
+    // When messages tab is clicked, mark all as viewed
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            if (this.getAttribute('data-tab') === 'messages') {
+                fetch('/admin/messages/mark-viewed', { 
+                    method: 'POST',
+                    headers: { 'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').getAttribute('content') }
+                }).then(() => {
+                    // Clear bell badge
+                    const bell = document.getElementById('nav-bell');
+                    if (bell) bell.querySelector('span') && bell.querySelector('span').remove();
+                    // Clear tab badge
+                    const tabBadge = document.querySelector('[data-tab="messages"] span');
+                    if (tabBadge) tabBadge.remove();
+                });
+            }
+        });
+    });
+
+    // Auto-open tab from URL param
+    const urlParams = new URLSearchParams(window.location.search);
+    const tabParam = urlParams.get('tab');
+    if (tabParam) {
+        const targetBtn = document.querySelector('[data-tab="' + tabParam + '"]');
+        if (targetBtn) targetBtn.click();
+    }
+</script>
+{% endblock %}

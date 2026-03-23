@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% block title %}Events · Local 3494{% endblock %}
+
+{% block content %}
+
+<!-- Page Header -->
+<section class="bg-navy text-white py-12">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="text-fire font-heading font-semibold text-xs uppercase tracking-widest mb-2">Local 3494</div>
+        <h1 class="font-heading font-bold text-3xl md:text-4xl text-white">Events</h1>
+        <p class="text-gray-400 mt-2">Union meetings, community activities, and more</p>
+    </div>
+</section>
+<div class="h-1 bg-gradient-to-r from-fire via-red-400 to-fire"></div>
+
+<!-- Events Content -->
+<section class="py-12 bg-gray-50">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-10">
+
+            {% if events %}
+                {% for event in events %}
+                {% set months = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'] %}
+                {% set parts = event.event_date.split('-') %}
+                {% set month_str = months[parts[1]|int - 1] %}
+                {% set day_str = parts[2]|int %}
+                <div class="bg-white rounded-lg border border-gray-200 shadow-sm hover:shadow-md hover:border-fire transition overflow-hidden">
+                    <div class="bg-navy px-5 py-3 flex items-center gap-3">
+                        <div class="bg-fire text-white rounded text-center min-w-[44px] py-1">
+                            <div class="text-xs font-semibold">{{ month_str }}</div>
+                            <div class="text-xl font-bold font-heading">{{ day_str }}</div>
+                        </div>
+                        <div>
+                            <div class="text-white font-heading font-bold text-sm">{{ event.title }}</div>
+                            <div class="text-gray-400 text-xs">{{ event.event_time or '' }}</div>
+                        </div>
+                    </div>
+                    <div class="p-5">
+                        {% if event.location %}
+                        <div class="flex items-center gap-1.5 text-gray-500 text-xs mb-3">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                            {{ event.location }}
+                        </div>
+                        {% endif %}
+                        {% if event.description %}
+                        <p class="text-gray-600 text-sm leading-relaxed mb-5">{{ event.description }}</p>
+                        {% endif %}
+                        {% if session.get('user_id') %}
+                            <a href="/members/events/{{ event.id }}" class="block w-full text-center bg-fire hover:bg-red-700 text-white text-xs font-semibold py-2 rounded transition">
+                                View &amp; Sign Up →
+                            </a>
+                        {% else %}
+                            <a href="/login" class="block w-full text-center bg-gray-100 hover:bg-gray-200 text-gray-500 text-xs font-semibold py-2 rounded transition">
+                                🔒 Login to Sign Up
+                            </a>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="col-span-3 text-center text-gray-500 py-12">No upcoming public events at this time.</div>
+            {% endif %}
+
+        </div>
+
+        <!-- Member note -->
+        {% if not session.get('user_id') %}
+        <div class="bg-navy/5 border border-navy/20 rounded-lg px-6 py-4 flex items-center gap-3">
+            <svg class="w-5 h-5 text-navy flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            <p class="text-navy text-sm">Members can sign up for events from the <a href="/members" class="font-semibold underline hover:text-fire transition">Member Portal</a> after logging in.</p>
+        </div>
+        {% endif %}
+    </div>
+</section>
+
+{% endblock %}

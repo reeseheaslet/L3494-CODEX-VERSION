@@ -1,0 +1,20 @@
+# Database files
+*.db
+*.sqlite
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Environment files
+.env
+.env.*
+
+# Screenshots and temp files
+*.png
+*.jpg
+
+# PA credentials (keep local only)
+pythonanywhere_creds.md
+PHASE_3_SUMMARY.md

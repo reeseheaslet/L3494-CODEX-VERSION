@@ -1,0 +1,227 @@
+{% extends "base.html" %}
+{% block title %}{{ post.title }} · Local 3494{% endblock %}
+
+{% block content %}
+<section class="bg-navy py-12">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="text-fire font-heading font-semibold text-xs uppercase tracking-widest mb-2">Family Portal • Discussions</div>
+        <a href="/family/discussions/{{ post.category_slug }}" class="text-gray-400 hover:text-white text-sm">← {{ post.category_name }}</a>
+    </div>
+</section>
+
+<section class="py-12 bg-gray-50">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+
+        <!-- Original Post -->
+        <div class="bg-white border border-gray-200 rounded-lg p-8 mb-8">
+            {% if post.locked %}
+            <div class="bg-orange-50 border border-orange-200 text-orange-800 px-4 py-3 rounded-lg mb-6 text-sm">
+                🔒 This thread is locked. New comments cannot be added.
+            </div>
+            {% endif %}
+
+            <!-- Post Header -->
+            <div class="flex items-center gap-4 mb-6 pb-6 border-b border-gray-200">
+                <div class="w-14 h-14 rounded-full bg-navy text-white flex items-center justify-center text-lg font-bold flex-shrink-0">
+                    {% if post.profile_photo %}
+                        <img src="{{ get_profile_photo(post.author_id) }}" alt="{{ post.author_name }}" class="w-full h-full rounded-full object-cover">
+                    {% else %}
+                        {{ post.author_name[0] if post.author_name else '?' }}
+                    {% endif %}
+                </div>
+                <div class="flex-1">
+                    <h1 class="font-heading font-bold text-2xl text-navy mb-2">{{ post.title }}</h1>
+                    <div class="text-gray-600">
+                        <span class="font-semibold">{{ post.author_name }}</span>
+                        <span class="text-gray-500">• {{ post.created_at[:16] }}</span>
+                    </div>
+                    {% if post.expires_at %}
+                    <div class="text-sm text-orange-600 mt-2">
+                        ⏰ Posted in <a href="/family/discussions/{{ post.category_slug }}" class="text-orange-600 hover:underline">{{ post.category_name }}</a> (expires {{ post.expires_at[:10] }})
+                    </div>
+                    {% else %}
+                    <div class="text-sm text-gray-500 mt-2">
+                        Posted in <a href="/family/discussions/{{ post.category_slug }}" class="text-navy hover:underline">{{ post.category_name }}</a>
+                    </div>
+                    {% endif %}
+                </div>
+                {% if is_admin %}
+                <div class="flex gap-2">
+                    <form method="POST" action="/family/discussions/post/{{ post.id }}/lock" class="inline">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="text-sm px-3 py-2 bg-yellow-100 text-yellow-800 rounded hover:bg-yellow-200">
+                            {% if post.locked %}🔓 Unlock{% else %}🔒 Lock{% endif %}
+                        </button>
+                    </form>
+                    <form method="POST" action="/family/discussions/post/{{ post.id }}/delete" class="inline" onsubmit="return confirm('Delete this post?');">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="text-sm px-3 py-2 bg-red-100 text-red-800 rounded hover:bg-red-200">
+                            🗑️ Delete
+                        </button>
+                    </form>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Post Body -->
+            <div class="mb-6">
+                <p class="text-gray-800 whitespace-pre-wrap leading-relaxed">{{ post.body }}</p>
+            </div>
+
+            <!-- Reactions Bar -->
+            <div class="flex gap-4 text-sm">
+                <button id="like-btn" onclick="toggleReaction('like')" class="flex items-center gap-2 px-4 py-2 rounded {% if post.user_liked %}bg-blue-100 text-blue-800 font-semibold{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif %} transition">
+                    👍 <span id="like-count">{{ post.likes }}</span>
+                </button>
+                <button id="heart-btn" onclick="toggleReaction('heart')" class="flex items-center gap-2 px-4 py-2 rounded {% if post.user_hearted %}bg-red-100 text-red-800 font-semibold{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif %} transition">
+                    ❤️ <span id="heart-count">{{ post.hearts }}</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Comments Section -->
+        <div class="mb-8">
+            <h2 class="font-heading font-bold text-2xl text-navy mb-6">Comments ({{ comments | length }})</h2>
+            
+            {% if comments %}
+            <div class="space-y-4 mb-8">
+                {% for comment in comments %}
+                <div class="bg-white border border-gray-200 rounded-lg p-6">
+                    <div class="flex items-start gap-3 mb-3">
+                        <div class="w-10 h-10 rounded-full bg-navy text-white flex items-center justify-center text-sm font-bold flex-shrink-0">
+                            {% if comment.profile_photo %}
+                                <img src="{{ get_profile_photo(comment.author_id) }}" alt="{{ comment.author_name }}" class="w-full h-full rounded-full object-cover">
+                            {% else %}
+                                {{ comment.author_name[0] if comment.author_name else '?' }}
+                            {% endif %}
+                        </div>
+                        <div class="flex-1">
+                            <div class="font-semibold text-navy">{{ comment.author_name }}</div>
+                            <div class="text-xs text-gray-500">{{ comment.created_at[:16] }}</div>
+                        </div>
+                        {% if is_admin %}
+                        <form method="POST" action="/family/discussions/comment/{{ comment.id }}/delete" class="inline" onsubmit="return confirm('Delete this comment?');">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="text-xs px-2 py-1 text-red-600 hover:text-red-800">🗑️</button>
+                        </form>
+                        {% endif %}
+                    </div>
+                    
+                    <p class="text-gray-800 mb-3 whitespace-pre-wrap">{{ comment.body }}</p>
+                    
+                    {% if comment.image_filename %}
+                    <div class="mb-3">
+                        <img src="/static/images/discussion_attachments/{{ comment.image_filename }}" alt="Comment attachment" class="max-w-full h-auto rounded">
+                    </div>
+                    {% endif %}
+                    
+                    <div class="flex gap-3 text-xs">
+                        <button onclick="toggleCommentReaction({{ comment.id }}, 'like')" class="px-3 py-1 rounded {% if comment.user_liked %}bg-blue-100 text-blue-800{% else %}bg-gray-100 text-gray-600 hover:bg-gray-200{% endif %} transition">
+                            👍 <span id="like-{{ comment.id }}">{{ comment.like_count }}</span>
+                        </button>
+                        <button onclick="toggleCommentReaction({{ comment.id }}, 'heart')" class="px-3 py-1 rounded {% if comment.user_hearted %}bg-red-100 text-red-800{% else %}bg-gray-100 text-gray-600 hover:bg-gray-200{% endif %} transition">
+                            ❤️ <span id="heart-{{ comment.id }}">{{ comment.heart_count }}</span>
+                        </button>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="bg-gray-100 rounded-lg p-6 text-center text-gray-600 mb-8">
+                No comments yet. Be the first to reply!
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Add Comment Form -->
+        {% if not post.locked %}
+        <div class="bg-white border border-gray-200 rounded-lg p-8">
+            <h3 class="font-heading font-bold text-lg text-navy mb-4">Add a Comment</h3>
+            <form method="POST" action="/family/discussions/post/{{ post.id }}/comment" enctype="multipart/form-data">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="mb-4">
+                    <textarea name="body" required placeholder="Share your thoughts..." rows="4" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-fire focus:ring-2 focus:ring-fire/20"></textarea>
+                </div>
+                <div class="mb-4">
+                    <label class="text-sm text-gray-600 block mb-2">Attach an image (optional)</label>
+                    <input type="file" name="image" accept="image/*" class="w-full px-4 py-2 border border-gray-300 rounded-lg">
+                </div>
+                <button type="submit" class="bg-fire hover:bg-fire-dark text-white font-semibold px-6 py-2 rounded-lg transition">
+                    Post Comment
+                </button>
+            </form>
+        </div>
+        {% endif %}
+
+        <!-- Back Link -->
+        <div class="mt-8 text-center">
+            <a href="/family/discussions/{{ post.category_slug }}" class="text-gray-400 hover:text-fire text-sm font-medium transition">← Back to {{ post.category_name }}</a>
+        </div>
+    </div>
+</section>
+
+<script>
+function toggleReaction(type) {
+    const postId = {{ post.id }};
+    fetch('/family/discussions/react', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+        },
+        body: JSON.stringify({
+            post_id: postId,
+            reaction_type: type
+        })
+    })
+    .then(r => r.json())
+    .then(data => {
+        document.getElementById('like-count').textContent = data.likes;
+        document.getElementById('heart-count').textContent = data.hearts;
+        
+        // Update button styles
+        const likeBtn = document.getElementById('like-btn');
+        const heartBtn = document.getElementById('heart-btn');
+        
+        if (type === 'like') {
+            if (data.user_reacted) {
+                likeBtn.classList.add('bg-blue-100', 'text-blue-800', 'font-semibold');
+                likeBtn.classList.remove('bg-gray-100', 'text-gray-700', 'hover:bg-gray-200');
+            } else {
+                likeBtn.classList.remove('bg-blue-100', 'text-blue-800', 'font-semibold');
+                likeBtn.classList.add('bg-gray-100', 'text-gray-700', 'hover:bg-gray-200');
+            }
+        } else if (type === 'heart') {
+            if (data.user_reacted) {
+                heartBtn.classList.add('bg-red-100', 'text-red-800', 'font-semibold');
+                heartBtn.classList.remove('bg-gray-100', 'text-gray-700', 'hover:bg-gray-200');
+            } else {
+                heartBtn.classList.remove('bg-red-100', 'text-red-800', 'font-semibold');
+                heartBtn.classList.add('bg-gray-100', 'text-gray-700', 'hover:bg-gray-200');
+            }
+        }
+    })
+    .catch(err => console.error('Error:', err));
+}
+
+function toggleCommentReaction(commentId, type) {
+    fetch('/family/discussions/react', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+        },
+        body: JSON.stringify({
+            comment_id: commentId,
+            reaction_type: type
+        })
+    })
+    .then(r => r.json())
+    .then(data => {
+        const selector = type === 'like' ? `#like-${commentId}` : `#heart-${commentId}`;
+        document.querySelector(selector).textContent = type === 'like' ? data.likes : data.hearts;
+    })
+    .catch(err => console.error('Error:', err));
+}
+</script>
+{% endblock %}

@@ -1,0 +1,305 @@
+{% extends "base.html" %}
+{% block title %}Family Store · Local 3494{% endblock %}
+
+{% block content %}
+
+<!-- Page Banner -->
+<section class="bg-navy text-white py-16 md:py-20">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <h1 class="font-heading font-bold text-4xl md:text-5xl text-white mb-3">
+            Family Store
+        </h1>
+        <p class="text-gray-300 text-lg">
+            Exclusive apparel for our firefighting families
+        </p>
+    </div>
+</section>
+
+<!-- Divider bar -->
+<div class="h-1 bg-gradient-to-r from-fire via-red-400 to-fire"></div>
+
+<!-- Store Content -->
+<section class="py-12 bg-gray-50">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+
+            <!-- Products Grid (left side, 2 cols on desktop) -->
+            <div class="lg:col-span-2">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                    {% for item in items %}
+                    <div class="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden hover:shadow-md transition" data-item-id="{{ item.id }}">
+                        <!-- Item Image Placeholder -->
+                        <div class="bg-gradient-to-br from-navy/20 to-fire/10 h-48 flex items-center justify-center">
+                            {% if item.image %}
+                                <img src="{{ item.image }}" alt="{{ item.name }}" class="w-full h-full object-cover">
+                            {% else %}
+                                <svg class="w-16 h-16 text-navy/30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
+                                </svg>
+                            {% endif %}
+                        </div>
+
+                        <!-- Item Details -->
+                        <div class="p-5">
+                            <h3 class="font-heading font-bold text-lg text-navy mb-2">{{ item.name }}</h3>
+                            <p class="text-gray-600 text-sm mb-3 line-clamp-2">{{ item.description }}</p>
+                            
+                            <!-- Price -->
+                            <div class="text-2xl font-bold text-fire mb-4">${{ "%.2f" % item.price }}</div>
+
+                            <!-- Size Selector (if item has sizes) -->
+                            {% if item.sizes_list %}
+                            <div class="mb-4">
+                                <label class="block text-xs font-semibold text-navy uppercase mb-2">Size</label>
+                                <select class="item-size w-full border border-gray-300 rounded px-3 py-2 text-sm focus:border-fire focus:outline-none focus:ring-1 focus:ring-fire">
+                                    <option value="">Select a size</option>
+                                    {% for size in item.sizes_list %}
+                                    <option value="{{ size }}">{{ size }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            {% endif %}
+
+                            <!-- Quantity Selector -->
+                            <div class="mb-4">
+                                <label class="block text-xs font-semibold text-navy uppercase mb-2">Quantity</label>
+                                <div class="flex items-center border border-gray-300 rounded w-fit">
+                                    <button class="qty-minus px-3 py-1 hover:bg-gray-100 transition">−</button>
+                                    <input type="number" class="item-qty w-12 text-center border-0 py-1" value="1" min="1" max="99">
+                                    <button class="qty-plus px-3 py-1 hover:bg-gray-100 transition">+</button>
+                                </div>
+                            </div>
+
+                            <!-- Add to Order Button -->
+                            <button class="add-to-order w-full bg-fire hover:bg-fire-dark text-white font-semibold py-2.5 rounded transition">
+                                Add to Order
+                            </button>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Order Summary Sidebar (right side) -->
+            <div class="space-y-6">
+                <!-- Order Summary Card -->
+                <div class="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden sticky top-24">
+                    <div class="bg-navy px-6 py-4">
+                        <h2 class="font-heading font-bold text-white text-sm uppercase tracking-wider">Order Summary</h2>
+                    </div>
+                    
+                    <div class="divide-y divide-gray-100" id="order-items">
+                        <div class="px-6 py-4 text-gray-500 text-sm text-center">
+                            No items in order yet
+                        </div>
+                    </div>
+
+                    <!-- Totals -->
+                    <div class="px-6 py-4 bg-gray-50 border-t border-gray-100">
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="text-gray-600 text-sm">Subtotal:</span>
+                            <span class="text-gray-900 font-semibold">$<span id="subtotal">0.00</span></span>
+                        </div>
+                        <div class="flex justify-between items-center mb-4">
+                            <span class="text-gray-600 text-sm">Shipping:</span>
+                            <span class="text-gray-900 font-semibold">FREE</span>
+                        </div>
+                        <div class="border-t border-gray-200 pt-4 flex justify-between items-center">
+                            <span class="text-navy font-bold">Total:</span>
+                            <span class="text-2xl font-bold text-fire">$<span id="total">0.00</span></span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Order Form Card -->
+                <div class="bg-white rounded-lg border border-gray-200 shadow-sm p-6" id="order-form-card">
+                    <h3 class="font-heading font-bold text-navy text-lg mb-5">Checkout</h3>
+                    <form id="order-form" method="POST" action="/store/order">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <!-- Name -->
+                        <div class="mb-4">
+                            <label class="block text-sm font-semibold text-navy mb-2">Name *</label>
+                            <input type="text" name="name" required class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:border-fire focus:outline-none focus:ring-1 focus:ring-fire">
+                        </div>
+
+                        <!-- Email -->
+                        <div class="mb-4">
+                            <label class="block text-sm font-semibold text-navy mb-2">Email *</label>
+                            <input type="email" name="email" required class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:border-fire focus:outline-none focus:ring-1 focus:ring-fire">
+                        </div>
+
+                        <!-- Phone (optional) -->
+                        <div class="mb-4">
+                            <label class="block text-sm font-semibold text-navy mb-2">Phone (optional)</label>
+                            <input type="tel" name="phone" class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:border-fire focus:outline-none focus:ring-1 focus:ring-fire" placeholder="(555) 123-4567">
+                        </div>
+
+                        <!-- Payment Method -->
+                        <div class="mb-5">
+                            <label class="block text-sm font-semibold text-navy mb-3">Payment Method *</label>
+                            <div class="space-y-2">
+                                <label class="flex items-center cursor-pointer">
+                                    <input type="radio" name="payment_method" value="venmo" required class="w-4 h-4 text-fire focus:ring-fire">
+                                    <span class="ml-3 text-sm text-gray-700">Venmo (@Local3494)</span>
+                                </label>
+                                <label class="flex items-center cursor-pointer">
+                                    <input type="radio" name="payment_method" value="zelle" required class="w-4 h-4 text-fire focus:ring-fire">
+                                    <span class="ml-3 text-sm text-gray-700">Zelle (treasurer@local3494.org)</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Hidden field for items JSON -->
+                        <input type="hidden" name="items_json" id="items_json" value="[]">
+
+                        <!-- Submit Button -->
+                        <button type="submit" class="w-full bg-fire hover:bg-fire-dark text-white font-semibold py-3 rounded transition disabled:opacity-50 disabled:cursor-not-allowed" id="submit-btn" disabled>
+                            Place Order
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Info Card -->
+                <div class="bg-navy/5 border border-navy/20 rounded-lg px-4 py-3">
+                    <div class="text-xs text-navy font-semibold mb-2">📍 PICKUP LOCATION</div>
+                    <p class="text-sm text-gray-700">Station 31<br>Davis Fire Department</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<script>
+// Order management
+const orderItems = {};
+const orderForm = document.getElementById('order-form');
+const orderItemsDiv = document.getElementById('order-items');
+const itemsJsonInput = document.getElementById('items_json');
+const subtotalSpan = document.getElementById('subtotal');
+const totalSpan = document.getElementById('total');
+const submitBtn = document.getElementById('submit-btn');
+
+function updateOrderDisplay() {
+    const itemsList = Object.values(orderItems);
+    
+    if (itemsList.length === 0) {
+        orderItemsDiv.innerHTML = '<div class="px-6 py-4 text-gray-500 text-sm text-center">No items in order yet</div>';
+        itemsJsonInput.value = '[]';
+        submitBtn.disabled = true;
+        subtotalSpan.textContent = '0.00';
+        totalSpan.textContent = '0.00';
+        return;
+    }
+
+    submitBtn.disabled = false;
+
+    let html = '';
+    let subtotal = 0;
+
+    itemsList.forEach((item, idx) => {
+        const itemTotal = item.price * item.quantity;
+        subtotal += itemTotal;
+        
+        html += `
+            <div class="px-6 py-3 flex justify-between items-start">
+                <div class="flex-1">
+                    <div class="text-sm font-semibold text-navy">${item.name}</div>
+                    ${item.size ? `<div class="text-xs text-gray-500">Size: ${item.size}</div>` : ''}
+                    <div class="text-xs text-gray-500">Qty: ${item.quantity} × $${item.price.toFixed(2)}</div>
+                </div>
+                <div class="text-right">
+                    <div class="text-sm font-semibold text-navy">$${itemTotal.toFixed(2)}</div>
+                    <button type="button" class="text-xs text-fire hover:text-fire-dark mt-1 remove-item" data-item-id="${item.item_id}" data-size="${item.size || ''}">Remove</button>
+                </div>
+            </div>
+        `;
+    });
+
+    orderItemsDiv.innerHTML = html;
+    itemsJsonInput.value = JSON.stringify(itemsList);
+    subtotalSpan.textContent = subtotal.toFixed(2);
+    totalSpan.textContent = subtotal.toFixed(2);
+
+    document.querySelectorAll('.remove-item').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.preventDefault();
+            const itemId = btn.dataset.itemId;
+            const size = btn.dataset.size;
+            const key = size ? `${itemId}-${size}` : itemId;
+            delete orderItems[key];
+            updateOrderDisplay();
+        });
+    });
+}
+
+document.querySelectorAll('.add-to-order').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        
+        const card = btn.closest('[data-item-id]');
+        const itemId = card.dataset.itemId;
+        
+        const nameElem = card.querySelector('h3');
+        const priceElem = card.querySelector('.text-2xl');
+        const sizeSelect = card.querySelector('.item-size');
+        const qtyInput = card.querySelector('.item-qty');
+        
+        const name = nameElem.textContent;
+        const price = parseFloat(priceElem.textContent.replace('$', ''));
+        const size = sizeSelect ? sizeSelect.value : null;
+        const qty = parseInt(qtyInput.value);
+
+        if (sizeSelect && !size) {
+            alert('Please select a size');
+            return;
+        }
+
+        if (!qty || qty < 1) {
+            alert('Please select a quantity');
+            return;
+        }
+
+        const key = size ? `${itemId}-${size}` : itemId;
+        orderItems[key] = {
+            item_id: itemId,
+            name: name,
+            price: price,
+            size: size,
+            quantity: qty
+        };
+
+        qtyInput.value = 1;
+        if (sizeSelect) sizeSelect.value = '';
+
+        updateOrderDisplay();
+    });
+});
+
+document.querySelectorAll('.qty-minus').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        const input = btn.nextElementSibling;
+        const val = parseInt(input.value);
+        if (val > 1) input.value = val - 1;
+    });
+});
+
+document.querySelectorAll('.qty-plus').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        const input = btn.previousElementSibling;
+        const val = parseInt(input.value);
+        if (val < 99) input.value = val + 1;
+    });
+});
+
+document.querySelectorAll('.item-qty').forEach(input => {
+    input.addEventListener('change', (e) => {
+        let val = parseInt(e.target.value);
+        if (!val || val < 1) e.target.value = 1;
+        if (val > 99) e.target.value = 99;
+    });
+});
+</script>
+
+{% endblock %}

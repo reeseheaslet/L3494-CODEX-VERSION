@@ -1,0 +1,138 @@
+{% extends "base.html" %}
+{% block title %}Family Members · Member Portal · Local 3494{% endblock %}
+
+{% block content %}
+<section class="bg-navy py-12">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="text-fire font-heading font-semibold text-xs uppercase tracking-widest mb-2">Member Portal</div>
+        <h1 class="font-heading font-bold text-3xl text-white">Family Members</h1>
+        <p class="text-gray-400 mt-1">Manage your linked family accounts</p>
+    </div>
+</section>
+<div class="h-1 bg-gradient-to-r from-fire via-red-400 to-fire"></div>
+
+<section class="py-12 bg-gray-50">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+
+        <!-- Info Box -->
+        <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-8 flex items-start gap-3">
+            <svg class="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/></svg>
+            <p class="text-blue-800 text-sm"><span class="font-semibold">Note:</span> New family members require admin approval before they can log in.</p>
+        </div>
+
+        <!-- Existing Family Members Table -->
+        {% if family_members %}
+        <div class="bg-white border border-gray-200 rounded-lg mb-8 overflow-hidden">
+            <div class="px-6 py-4 border-b border-gray-200">
+                <h2 class="font-heading font-bold text-xl text-navy">Your Family Members</h2>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full">
+                    <thead class="bg-gray-50 border-b border-gray-200">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Name</th>
+                            <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Email</th>
+                            <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Status</th>
+                            <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-200">
+                        {% for member in family_members %}
+                        <tr class="hover:bg-gray-50 transition">
+                            <td class="px-6 py-4 text-sm font-medium text-navy">{{ member.name }}</td>
+                            <td class="px-6 py-4 text-sm text-gray-600">{{ member.email }}</td>
+                            <td class="px-6 py-4 text-sm">
+                                {% if member.status == 'pending' %}
+                                <span class="inline-block bg-yellow-100 text-yellow-800 text-xs font-semibold px-3 py-1 rounded-full">Pending Approval</span>
+                                {% elif member.status == 'active' %}
+                                <span class="inline-block bg-green-100 text-green-800 text-xs font-semibold px-3 py-1 rounded-full">Active</span>
+                                {% else %}
+                                <span class="inline-block bg-gray-100 text-gray-800 text-xs font-semibold px-3 py-1 rounded-full">{{ member.status | capitalize }}</span>
+                                {% endif %}
+                            </td>
+                            <td class="px-6 py-4 text-sm">
+                                <form method="POST" action="/members/family/remove" class="inline" onsubmit="return confirm('Are you sure you want to remove this family member?');">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <input type="hidden" name="family_member_id" value="{{ member.id }}">
+                                    <button type="submit" class="text-red-600 hover:text-red-800 font-semibold text-sm transition">Remove</button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% else %}
+        <div class="bg-white rounded-lg p-12 text-center mb-8">
+            <svg class="w-16 h-16 text-gray-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.856-1.487M15 10a3 3 0 11-6 0 3 3 0 016 0zM6 20v-2a3 3 0 016 0v2H6z"/></svg>
+            <p class="text-gray-500 text-lg">No family members linked yet</p>
+        </div>
+        {% endif %}
+
+        <!-- Invite Your Spouse/Partner Form Section -->
+        {% if pending_invitation %}
+        <div class="bg-white border border-orange-300 rounded-lg p-8 mb-8">
+            <h2 class="font-heading font-bold text-2xl text-navy mb-2">Invitation Pending</h2>
+            <p class="text-gray-600 text-sm mb-6">
+                An invitation has been sent to <strong>{{ pending_invitation.invitee_email }}</strong> for <strong>{{ pending_invitation.invitee_name }}</strong>.
+            </p>
+            
+            <div class="bg-orange-50 border border-orange-200 rounded p-4 mb-6">
+                <p class="text-sm text-orange-800">
+                    <strong>Expires:</strong> {{ pending_invitation.expires_at[:10] }} 
+                    <span class="text-xs text-orange-600">(7 days from creation)</span>
+                </p>
+            </div>
+            
+            <div class="flex gap-3">
+                <!-- Resend button -->
+                <form method="POST" action="/members/family/invite" class="inline" style="display: none;" id="resend-form">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="invitee_name" value="{{ pending_invitation.invitee_name }}">
+                    <input type="hidden" name="invitee_email" value="{{ pending_invitation.invitee_email }}">
+                </form>
+                <button type="button" onclick="document.getElementById('resend-form').submit();" class="bg-fire hover:bg-fire-dark text-white font-semibold px-6 py-2 rounded transition text-sm">
+                    Resend Invitation
+                </button>
+                
+                <!-- Cancel button -->
+                <form method="POST" action="/members/family/invite/cancel" class="inline">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="invitation_id" value="{{ pending_invitation.id }}">
+                    <button type="submit" class="bg-gray-400 hover:bg-gray-500 text-white font-semibold px-6 py-2 rounded transition text-sm" onclick="return confirm('Are you sure you want to cancel this invitation?');">
+                        Cancel Invitation
+                    </button>
+                </form>
+            </div>
+        </div>
+        {% else %}
+        <div class="bg-white border border-gray-200 rounded-lg p-8 mb-8">
+            <h2 class="font-heading font-bold text-2xl text-navy mb-2">Invite Your Spouse/Partner</h2>
+            <p class="text-gray-600 text-sm mb-6">Send an email invitation to your spouse or partner to join the family portal. They'll receive an email with instructions to create their account.</p>
+            
+            <form method="POST" action="/members/family/invite" class="space-y-4">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div>
+                    <label for="invitee_name" class="block text-sm font-semibold text-navy mb-2">Their Full Name *</label>
+                    <input type="text" id="invitee_name" name="invitee_name" required placeholder="e.g., Jane Smith..." class="w-full border border-gray-300 rounded px-4 py-2 text-sm focus:border-fire focus:outline-none focus:ring-1 focus:ring-fire">
+                </div>
+
+                <div>
+                    <label for="invitee_email" class="block text-sm font-semibold text-navy mb-2">Their Email Address *</label>
+                    <input type="email" id="invitee_email" name="invitee_email" required placeholder="e.g., jane@example.com..." class="w-full border border-gray-300 rounded px-4 py-2 text-sm focus:border-fire focus:outline-none focus:ring-1 focus:ring-fire">
+                    <p class="text-xs text-gray-500 mt-1">The invitation will be sent to this email address</p>
+                </div>
+
+                <button type="submit" class="bg-fire hover:bg-fire-dark text-white font-semibold px-6 py-2 rounded transition text-sm">Send Invitation</button>
+            </form>
+        </div>
+        {% endif %}
+
+        <!-- Back to Members Portal -->
+        <div class="mt-10 text-center">
+            <a href="/members" class="text-gray-400 hover:text-fire text-sm font-medium transition">← Back to Members Portal</a>
+        </div>
+    </div>
+</section>
+{% endblock %}

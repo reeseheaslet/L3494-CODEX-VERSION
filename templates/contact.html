@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+{% block title %}Contact · Local 3494{% endblock %}
+
+{% block content %}
+
+<!-- Page Header -->
+<section class="bg-navy text-white py-12">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="text-fire font-heading font-semibold text-xs uppercase tracking-widest mb-2">Local 3494</div>
+        <h1 class="font-heading font-bold text-3xl md:text-4xl text-white">Get in Touch</h1>
+        <p class="text-gray-400 mt-2">Send a message to union leadership</p>
+    </div>
+</section>
+<div class="h-1 bg-gradient-to-r from-fire via-red-400 to-fire"></div>
+
+<section class="py-16 bg-gray-50">
+    <div class="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8">
+
+        {% if success %}
+        <div class="bg-green-50 border border-green-200 rounded-lg p-6 text-center mb-8">
+            <div class="text-green-600 text-2xl mb-2">✅</div>
+            <h2 class="font-heading font-bold text-green-800 text-lg mb-1">Message Sent!</h2>
+            <p class="text-green-700 text-sm">Thanks for reaching out. We'll get back to you at your preferred contact method.</p>
+        </div>
+        {% else %}
+
+        {% if error %}
+        <div class="bg-red-50 border border-red-200 rounded-lg p-4 mb-6 text-red-700 text-sm">{{ error }}</div>
+        {% endif %}
+
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-8">
+            <h2 class="font-heading font-bold text-navy text-xl mb-6">Send Us a Message</h2>
+            <form method="POST" action="/contact" class="space-y-5">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <!-- Honeypot - hidden from real users, bots fill this in -->
+                <div style="display:none;" aria-hidden="true">
+                    <input type="text" name="website_url" tabindex="-1" autocomplete="off">
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                    <div>
+                        <label class="block text-sm font-semibold text-navy mb-1.5">Name <span class="text-fire">*</span></label>
+                        <input type="text" name="name" required class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-fire/30 focus:border-fire transition">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-navy mb-1.5">Email <span class="text-fire">*</span></label>
+                        <input type="email" name="email" required class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-fire/30 focus:border-fire transition">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                    <div>
+                        <label class="block text-sm font-semibold text-navy mb-1.5">Phone Number</label>
+                        <input type="tel" name="phone" class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-fire/30 focus:border-fire transition">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-navy mb-1.5">Preferred Contact</label>
+                        <div class="flex gap-4 mt-2.5">
+                            <label class="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+                                <input type="radio" name="preferred_contact" value="email" checked class="accent-fire"> Email
+                            </label>
+                            <label class="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+                                <input type="radio" name="preferred_contact" value="phone" class="accent-fire"> Phone
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-semibold text-navy mb-1.5">Subject</label>
+                    <input type="text" name="subject" class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-fire/30 focus:border-fire transition" placeholder="What's this about?">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-semibold text-navy mb-1.5">Message <span class="text-fire">*</span></label>
+                    <textarea name="message" required rows="5" class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-fire/30 focus:border-fire transition resize-none" placeholder="Your message..."></textarea>
+                </div>
+
+                <button type="submit" class="w-full bg-fire hover:bg-red-700 text-white font-semibold py-3 rounded text-sm transition">
+                    Send Message
+                </button>
+            </form>
+        </div>
+        {% endif %}
+    </div>
+</section>
+
+{% endblock %}

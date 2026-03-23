@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+{% block title %}Family Chat · Family Portal · Local 3494{% endblock %}
+
+{% block content %}
+<section class="bg-navy py-12">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="text-fire font-heading font-semibold text-xs uppercase tracking-widest mb-2">Family Portal</div>
+        <h1 class="font-heading font-bold text-3xl text-white">Family Chat</h1>
+        <p class="text-gray-400 mt-1">Stay connected</p>
+    </div>
+</section>
+<div class="h-1 bg-gradient-to-r from-fire via-red-400 to-fire"></div>
+
+<section class="py-12 bg-gray-50">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+
+        <!-- Family Portal Navigation Tabs -->
+        <div class="bg-white border border-gray-200 rounded-lg mb-8 overflow-hidden">
+            <div class="flex flex-wrap border-b border-gray-200">
+                <a href="/family" class="px-6 py-3 font-semibold text-gray-600 hover:text-navy hover:bg-gray-50">
+                    🏠 Home
+                </a>
+                <a href="/family/events" class="px-6 py-3 font-semibold text-gray-600 hover:text-navy hover:bg-gray-50">
+                    📅 Events
+                </a>
+                <a href="/family/roster" class="px-6 py-3 font-semibold text-gray-600 hover:text-navy hover:bg-gray-50">
+                    👥 Roster
+                </a>
+                <a href="/family/announcements" class="px-6 py-3 font-semibold text-gray-600 hover:text-navy hover:bg-gray-50">
+                    📢 Announcements
+                </a>
+                <a href="/family/photos" class="px-6 py-3 font-semibold text-gray-600 hover:text-navy hover:bg-gray-50">
+                    📸 Photos
+                </a>
+                <a href="/family/chat" class="px-6 py-3 font-semibold text-navy border-b-2 border-fire hover:bg-gray-50">
+                    💬 Chat
+                </a>
+            </div>
+        </div>
+
+        <!-- Chat Container -->
+        <div class="bg-white border border-gray-200 rounded-lg overflow-hidden flex flex-col h-[600px] mb-4">
+            
+            <!-- Messages Area -->
+            <div id="messages-container" class="flex-1 overflow-y-auto p-6 space-y-4 bg-gray-50">
+                {% if messages %}
+                    {% for message in messages %}
+                    <div class="mb-4">
+                        <div class="flex items-baseline gap-2 mb-1">
+                            <span class="font-semibold text-navy text-sm">{{ message.display_name }}</span>
+                            <span class="text-gray-500 text-xs">{{ message.created_at }}</span>
+                        </div>
+                        <div class="bg-white border border-gray-200 rounded-lg p-3 text-sm text-gray-700 max-w-2xl">
+                            {{ message.message }}
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                <div class="flex items-center justify-center h-full text-center">
+                    <div>
+                        <svg class="w-16 h-16 text-gray-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                        <p class="text-gray-500 text-lg">No messages yet. Start the conversation!</p>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Divider -->
+            <div class="border-t border-gray-200"></div>
+
+            <!-- Send Message Form -->
+            <div class="p-4 bg-white">
+                <form method="POST" action="/family/chat/send" class="flex gap-3">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="text" name="message" required placeholder="Type a message..." class="flex-1 border border-gray-300 rounded px-4 py-2 text-sm focus:border-fire focus:outline-none focus:ring-1 focus:ring-fire">
+                    <button type="submit" class="bg-fire hover:bg-fire-dark text-white font-semibold px-6 py-2 rounded transition text-sm">Send</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Refresh Button -->
+        <div class="flex justify-center gap-3">
+            <a href="/family/chat" class="bg-navy hover:bg-navy-light text-white font-semibold px-6 py-2 rounded transition text-sm flex items-center gap-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                Refresh
+            </a>
+            <a href="/family" class="text-gray-400 hover:text-fire text-sm font-medium transition flex items-center gap-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+                Back to Family Portal
+            </a>
+        </div>
+    </div>
+</section>
+
+<script>
+// Auto-scroll to bottom on load
+window.addEventListener('load', function() {
+    const messagesContainer = document.getElementById('messages-container');
+    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+});
+</script>
+
+{% endblock %}

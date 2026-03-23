@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% block title %}Member Discussions · Local 3494{% endblock %}
+
+{% block content %}
+
+<!-- Page Banner -->
+<section class="bg-navy py-12">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between">
+            <div>
+                <h1 class="font-heading font-bold text-4xl text-white mb-2">Discussions</h1>
+                <p class="text-gray-300">Member discussions and conversations</p>
+            </div>
+            <a href="/members/discussions/new" class="mt-6 sm:mt-0 inline-block bg-fire hover:bg-red-700 text-white font-semibold py-2.5 px-6 rounded transition">
+                + New Discussion
+            </a>
+        </div>
+    </div>
+</section>
+
+<!-- Fire Gradient Divider -->
+<div class="h-1 bg-gradient-to-r from-fire via-red-400 to-fire"></div>
+
+<!-- Main Content -->
+<section class="py-12 bg-gray-50 min-h-screen">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            
+            <!-- Main Column (2/3) -->
+            <div class="lg:col-span-2 space-y-8">
+                {% for item in cats_with_posts %}
+                    <div>
+                        <!-- Category Heading -->
+                        <h2 class="font-heading font-bold text-navy text-xl mb-4">{{ item.category.name }}</h2>
+                        
+                        {% if item.posts %}
+                            <!-- Posts Grid -->
+                            <div class="space-y-3">
+                                {% for post in item.posts %}
+                                <a href="/members/discussions/post/{{ post.id }}" class="block bg-white border border-gray-200 hover:shadow-md rounded-lg p-4 transition">
+                                    <div class="flex items-start justify-between mb-2">
+                                        <h3 class="font-semibold text-navy text-base flex-1 hover:text-fire transition">{{ post.title }}</h3>
+                                        {% if post.comment_count > 0 %}
+                                        <span class="ml-2 bg-fire text-white text-xs font-semibold px-2 py-1 rounded-full whitespace-nowrap">
+                                            {{ post.comment_count }}
+                                        </span>
+                                        {% endif %}
+                                    </div>
+                                    <div class="text-gray-600 text-sm flex items-center gap-3">
+                                        <span>{{ post.author_name or 'Anonymous' }}</span>
+                                        <span class="text-gray-400">•</span>
+                                        <span>{{ post.created_at[:10] }}</span>
+                                    </div>
+                                </a>
+                                {% endfor %}
+                            </div>
+                        {% else %}
+                            <!-- No Posts -->
+                            <div class="bg-white border border-gray-200 rounded-lg p-6 text-center">
+                                <p class="text-gray-500">No posts yet in this category.</p>
+                            </div>
+                        {% endif %}
+                    </div>
+                {% endfor %}
+            </div>
+            
+            <!-- Sidebar (1/3) -->
+            <div class="lg:col-span-1">
+                <div class="bg-white border border-gray-200 rounded-lg shadow-sm p-6 sticky top-4">
+                    <h3 class="font-heading font-bold text-navy text-base mb-4">Your Profile</h3>
+                    <div class="border-t border-gray-200 pt-4">
+                        <p class="text-gray-700 font-semibold">{{ username }}</p>
+                        {% if role == 'board_member' %}
+                        <span class="inline-block mt-2 bg-blue-600 text-white text-xs font-semibold px-2 py-1 rounded">Board Member</span>
+                        {% elif role in ['admin', 'super_admin'] %}
+                        <span class="inline-block mt-2 bg-fire text-white text-xs font-semibold px-2 py-1 rounded">Admin</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+{% endblock %}

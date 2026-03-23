@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+{% block title %}Member Chat · Local 3494{% endblock %}
+
+{% block content %}
+
+<!-- Page Banner -->
+<section class="bg-navy text-white py-12">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <h1 class="font-heading font-bold text-3xl md:text-4xl text-white">Member Chat</h1>
+        <p class="text-gray-400 mt-2">Connect with other members</p>
+    </div>
+</section>
+
+<!-- Divider bar -->
+<div class="h-1 bg-gradient-to-r from-fire via-red-400 to-fire"></div>
+
+<!-- Chat Container -->
+<section class="py-8 bg-gray-50">
+    <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden flex flex-col" style="height: 600px;">
+
+            <!-- Messages Area -->
+            <div class="flex-1 overflow-y-auto p-6 space-y-4" id="messages-container">
+                {% if messages %}
+                    {% for msg in messages %}
+                    <div class="flex gap-3">
+                        <div class="flex-shrink-0">
+                            <div class="w-8 h-8 rounded-full bg-navy/20 flex items-center justify-center text-xs font-bold text-navy">
+                                {{ msg.member_name[0].upper() if msg.member_name else '?' }}
+                            </div>
+                        </div>
+                        <div class="flex-1">
+                            <div class="flex items-baseline gap-2">
+                                <span class="text-sm font-semibold text-navy">{{ msg.member_name or 'Unknown' }}</span>
+                                <span class="text-xs text-gray-500">{{ msg.created_at }}</span>
+                            </div>
+                            <p class="text-sm text-gray-700 mt-1 break-words">{{ msg.message }}</p>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                <div class="flex flex-col items-center justify-center h-full text-center">
+                    <svg class="w-12 h-12 text-gray-300 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    <p class="text-gray-500 text-sm">No messages yet. Start the conversation!</p>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Message Input -->
+            <div class="border-t border-gray-200 bg-gray-50 p-4">
+                <form method="POST" action="/members/chat/send" class="flex gap-2">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input 
+                        type="text" 
+                        name="message" 
+                        placeholder="Type a message..." 
+                        required 
+                        autocomplete="off"
+                        class="flex-1 border border-gray-300 rounded px-4 py-2 text-sm focus:border-fire focus:outline-none focus:ring-1 focus:ring-fire"
+                    >
+                    <button type="submit" class="bg-fire hover:bg-fire-dark text-white font-semibold px-4 py-2 rounded transition flex items-center gap-2 text-sm">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
+                        Send
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Info -->
+        <div class="mt-6 bg-navy/5 border border-navy/20 rounded-lg px-6 py-4">
+            <div class="text-xs text-navy font-semibold mb-2">💬 HOW IT WORKS</div>
+            <p class="text-sm text-gray-700">
+                This is a simple message board. Messages are displayed for all members. Refresh the page to see new messages. 
+                Keep discussions professional and respectful.
+            </p>
+        </div>
+    </div>
+</section>
+
+<script>
+    // Auto-scroll to bottom on load
+    const container = document.getElementById('messages-container');
+    if (container) {
+        container.scrollTop = container.scrollHeight;
+    }
+</script>
+
+{% endblock %}

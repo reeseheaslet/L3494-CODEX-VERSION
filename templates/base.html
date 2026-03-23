@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Local 3494 · Davis Professional Firefighters{% endblock %}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              navy: { DEFAULT: '#1e3a5c', light: '#2a4f7c', dark: '#152b44', xdark: '#0e1e30' },
+              fire: { DEFAULT: '#c41230', light: '#e01535', dark: '#9e0e26' }
+            },
+            fontFamily: {
+              heading: ['Montserrat', 'sans-serif'],
+              body: ['Open Sans', 'sans-serif'],
+            }
+          }
+        }
+      }
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&family=Open+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Open Sans', sans-serif; }
+        h1, h2, h3, h4, h5, h6 { font-family: 'Montserrat', sans-serif; }
+        .nav-link { position: relative; }
+        .nav-link::after { content: ''; position: absolute; bottom: -2px; left: 0; width: 0; height: 2px; background: #c41230; transition: width 0.2s; }
+        .nav-link:hover::after { width: 100%; }
+        .nav-link.active::after { width: 100%; }
+    </style>
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    {% block head %}{% endblock %}
+</head>
+<body class="bg-gray-50 text-gray-900 flex flex-col min-h-screen">
+
+    <!-- Top utility bar -->
+    <div class="bg-navy-xdark text-gray-400 text-xs py-1.5 hidden md:block">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex justify-between items-center">
+            <span>Davis Professional Firefighters</span>
+            <span>City of Davis, California</span>
+        </div>
+    </div>
+
+    <!-- Main Navigation -->
+    <nav class="bg-navy sticky top-0 z-50 shadow-lg">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+
+                <!-- Logo / Branding -->
+                <a href="/" class="flex items-center gap-3 group">
+                    <img src="/static/davis-logo.jpg" alt="City of Davis" class="h-10 w-auto rounded">
+                    <div class="hidden sm:block">
+                        <div class="text-white font-heading font-bold text-base leading-tight">Davis Professional Firefighters</div>
+                        <div class="text-gray-400 text-xs">Local 3494</div>
+                    </div>
+                </a>
+
+                <!-- Desktop Nav -->
+                <div class="hidden md:flex items-center gap-1">
+                    <a href="/" class="nav-link {% if request.path == '/' %}active{% endif %} text-gray-200 hover:text-white px-4 py-2 text-sm font-medium transition">Home</a>
+                    <a href="/events" class="nav-link {% if request.path == '/events' %}active{% endif %} text-gray-200 hover:text-white px-4 py-2 text-sm font-medium transition">Events</a>
+                    <a href="/store" class="nav-link {% if request.path == '/store' %}active{% endif %} text-gray-200 hover:text-white px-4 py-2 text-sm font-medium transition">Store</a>
+                    <a href="/gallery" class="nav-link {% if request.path == '/gallery' %}active{% endif %} text-gray-200 hover:text-white px-4 py-2 text-sm font-medium transition">Gallery</a>
+                    <a href="/shift-calendar" class="nav-link {% if request.path == '/shift-calendar' %}active{% endif %} text-gray-200 hover:text-white px-4 py-2 text-sm font-medium transition">Shift Calendar</a>
+                    <a href="/about" class="nav-link {% if request.path == '/about' %}active{% endif %} text-gray-200 hover:text-white px-4 py-2 text-sm font-medium transition">About</a>
+                    <a href="/contact" class="nav-link {% if request.path == '/contact' %}active{% endif %} text-gray-200 hover:text-white px-4 py-2 text-sm font-medium transition">Contact</a>
+                    {% if session.get('user_id') %}
+                    <!-- User Profile / Portal -->
+                    <div class="ml-3 flex items-center gap-2">
+                        {% if session.get('role') in ('admin', 'super_admin') %}
+                        <a href="/admin?tab=messages" id="nav-bell" class="relative flex items-center justify-center w-8 h-8 text-gray-300 hover:text-white transition" title="Contact Messages">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
+                            {% if total_notification_count > 0 %}
+                            <span class="absolute -top-1 -right-1 bg-fire text-white text-xs font-bold rounded-full w-4 h-4 flex items-center justify-center leading-none">{{ total_notification_count if total_notification_count < 10 else '9+' }}</span>
+                            {% endif %}
+                        </a>
+                        {% endif %}
+                        <!-- Profile Photo Avatar -->
+                        <button onclick="togglePhotoModal()" class="w-8 h-8 rounded-full border-2 border-fire hover:border-white transition flex items-center justify-center bg-navy text-xs font-bold text-white cursor-pointer hover:ring-2 hover:ring-fire/20" title="Change profile photo">
+                            {% set profile_photo = get_profile_photo(session.get('user_id')) %}
+                            {% if profile_photo and profile_photo != '/static/images/default-avatar.png' %}
+                                <img src="{{ profile_photo }}" alt="{{ session.get('username') }}" class="w-full h-full rounded-full object-cover">
+                            {% else %}
+                                {{ session.get('username')[0] if session.get('username') else '?' }}
+                            {% endif %}
+                        </button>
+                        <a href="{% if session.get('role') == 'family' %}/family{% else %}/members{% endif %}" class="bg-fire hover:bg-fire-dark text-white px-5 py-2 rounded text-sm font-semibold transition flex items-center gap-1.5">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+                            {% if session.get('role') == 'family' %}Family Portal{% else %}Members{% endif %}
+                        </a>
+                    </div>
+                    {% else %}
+                    <a href="/members" class="ml-3 bg-fire hover:bg-fire-dark text-white px-5 py-2 rounded text-sm font-semibold transition flex items-center gap-1.5">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+                        Members
+                    </a>
+                    {% endif %}
+                </div>
+
+                <!-- Mobile Toggle -->
+                <button id="mobile-menu-btn" class="md:hidden text-gray-300 hover:text-white p-2">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+                </button>
+            </div>
+        </div>
+
+        <!-- Mobile Menu -->
+        <div id="mobile-menu" class="hidden md:hidden bg-navy-dark border-t border-navy-light">
+            <div class="px-4 py-3 space-y-1">
+                <a href="/" class="block px-3 py-2 text-gray-300 hover:text-white hover:bg-navy-light rounded text-sm font-medium transition">Home</a>
+                <a href="/events" class="block px-3 py-2 text-gray-300 hover:text-white hover:bg-navy-light rounded text-sm font-medium transition">Events</a>
+                <a href="/store" class="block px-3 py-2 text-gray-300 hover:text-white hover:bg-navy-light rounded text-sm font-medium transition">Store</a>
+                <a href="/gallery" class="block px-3 py-2 text-gray-300 hover:text-white hover:bg-navy-light rounded text-sm font-medium transition">Gallery</a>
+                <a href="/shift-calendar" class="block px-3 py-2 text-gray-300 hover:text-white hover:bg-navy-light rounded text-sm font-medium transition">Shift Calendar</a>
+                <a href="/about" class="block px-3 py-2 text-gray-300 hover:text-white hover:bg-navy-light rounded text-sm font-medium transition">About</a>
+                <a href="/contact" class="block px-3 py-2 text-gray-300 hover:text-white hover:bg-navy-light rounded text-sm font-medium transition">Contact</a>
+                {% if session.get('user_id') %}
+                <a href="{% if session.get('role') == 'family' %}/family{% else %}/members{% endif %}" class="block mt-2 bg-fire text-white px-3 py-2 rounded text-sm font-semibold transition">🔒 {% if session.get('role') == 'family' %}Family Portal{% else %}Members Portal{% endif %}</a>
+                {% else %}
+                <a href="/members" class="block mt-2 bg-fire text-white px-3 py-2 rounded text-sm font-semibold transition">🔒 Members Portal</a>
+                {% endif %}
+            </div>
+        </div>
+    </nav>
+
+    <!-- Flash Messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        <div class="bg-white border-b border-gray-200">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 space-y-2">
+                {% for category, message in messages %}
+                <div class="flex items-center gap-2 px-4 py-2 rounded text-sm font-medium
+                    {% if category == 'success' %}bg-green-50 border border-green-200 text-green-800
+                    {% else %}bg-red-50 border border-red-200 text-red-800{% endif %}">
+                    {% if category == 'success' %}✓{% else %}⚠{% endif %} {{ message }}
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+    {% endwith %}
+
+    <!-- General Membership Meeting Banner -->
+    {% if next_gm_meeting and session.get('user_id') %}
+    <div class="bg-fire text-white px-4 py-3">
+        <div class="max-w-7xl mx-auto flex items-center justify-center gap-3 text-center flex-wrap">
+            <span class="text-xl">🔔</span>
+            <div class="font-heading font-bold text-lg tracking-wide uppercase">
+                General Membership Meeting
+            </div>
+            <div class="text-white/90 font-semibold text-sm">
+                —
+                {% set months = ['', 'January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'] %}
+                {% set dp = next_gm_meeting.meeting_date.split('-') %}
+                {{ months[dp[1]|int] }} {{ dp[2]|int }}, {{ dp[0] }}
+                at
+                {% set tp = next_gm_meeting.meeting_time.split(':') %}
+                {% set hr = tp[0]|int %}
+                {% set mn = tp[1] %}
+                {% if hr == 0 %}12:{{ mn }} AM
+                {% elif hr < 12 %}{{ hr }}:{{ mn }} AM
+                {% elif hr == 12 %}12:{{ mn }} PM
+                {% else %}{{ hr - 12 }}:{{ mn }} PM
+                {% endif %}
+                · {{ next_gm_meeting.location }}
+            </div>
+            <span class="text-xl">🔔</span>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Page Content -->
+    <main class="flex-1">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-navy-xdark text-gray-400 mt-auto">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
+                <div>
+                    <div class="text-white font-heading font-bold text-lg mb-2">Davis Professional Firefighters</div>
+                    <div class="text-sm">Local 3494<br>City of Davis, California</div>
+                    <div class="text-sm mt-3">Affiliated with AFL-CIO &amp; CLC</div>
+                </div>
+                <div>
+                    <div class="text-white font-semibold mb-3 text-sm uppercase tracking-wider">Quick Links</div>
+                    <ul class="space-y-1.5 text-sm">
+                        <li><a href="/events" class="hover:text-white transition">Events</a></li>
+                        <li><a href="/store" class="hover:text-white transition">Store</a></li>
+                        <li><a href="/about" class="hover:text-white transition">About Us</a></li>
+                        <li><a href="/contact" class="hover:text-white transition">Contact</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <div class="text-white font-semibold mb-3 text-sm uppercase tracking-wider">Members</div>
+                    <ul class="space-y-1.5 text-sm">
+                        <li><a href="/members" class="hover:text-white transition">Member Portal</a></li>
+                        <li><a href="/login" class="hover:text-white transition">Sign In</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="border-t border-navy-light pt-6 text-center text-xs text-gray-600">
+                © 2026 Davis Professional Firefighters · Local 3494 · All rights reserved
+            </div>
+        </div>
+    </footer>
+
+    <!-- Profile Photo Upload Modal -->
+    <div id="photo-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
+        <div class="bg-white rounded-lg shadow-xl w-full max-w-md mx-4">
+            <div class="bg-navy text-white px-6 py-4 border-b border-gray-200">
+                <h2 class="font-heading font-bold text-lg">Change Profile Photo</h2>
+            </div>
+            <div class="p-6">
+                <form method="POST" action="/profile/photo/upload" enctype="multipart/form-data">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <div class="mb-4">
+                        <label for="photo-input" class="block text-sm font-semibold text-navy mb-2">
+                            Select a Photo
+                        </label>
+                        <input type="file" name="photo" id="photo-input" accept="image/jpeg,image/png,image/gif" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-fire">
+                        <p class="text-xs text-gray-500 mt-1">JPG, PNG, or GIF (max 16MB)</p>
+                    </div>
+                    <div class="flex gap-3">
+                        <button type="submit" class="flex-1 bg-fire hover:bg-fire-dark text-white font-semibold py-2 rounded-lg transition">
+                            Upload
+                        </button>
+                        <button type="button" onclick="togglePhotoModal()" class="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-2 rounded-lg transition">
+                            Cancel
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('mobile-menu-btn').addEventListener('click', function() {
+            document.getElementById('mobile-menu').classList.toggle('hidden');
+        });
+
+        function togglePhotoModal() {
+            const modal = document.getElementById('photo-modal');
+            modal.classList.toggle('hidden');
+        }
+
+        // Close modal when clicking outside
+        document.getElementById('photo-modal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                togglePhotoModal();
+            }
+        });
+    </script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,148 @@
+{% extends "base.html" %}
+{% block title %}Family Directory · Local 3494{% endblock %}
+
+{% block content %}
+<section class="bg-navy py-12">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="text-fire font-heading font-semibold text-xs uppercase tracking-widest mb-2">Family Portal</div>
+        <h1 class="font-heading font-bold text-3xl text-white">Family Directory</h1>
+        <p class="text-gray-400 mt-1">Get to know our Local 3494 firefighters and families</p>
+    </div>
+</section>
+<div class="h-1 bg-gradient-to-r from-fire via-red-400 to-fire"></div>
+
+<section class="py-12 bg-gray-50">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+
+        <!-- Family Portal Navigation Tabs -->
+        <div class="bg-white border border-gray-200 rounded-lg mb-8 overflow-hidden">
+            <div class="flex flex-wrap border-b border-gray-200">
+                <a href="/family" class="px-6 py-3 font-semibold text-gray-600 hover:text-navy hover:bg-gray-50">
+                    🏠 Home
+                </a>
+                <a href="/family/roster" class="px-6 py-3 font-semibold text-navy border-b-2 border-fire hover:bg-gray-50">
+                    👥 Directory
+                </a>
+                <a href="/family/events" class="px-6 py-3 font-semibold text-gray-600 hover:text-navy hover:bg-gray-50">
+                    📅 Events
+                </a>
+                <a href="/family/announcements" class="px-6 py-3 font-semibold text-gray-600 hover:text-navy hover:bg-gray-50">
+                    📢 Announcements
+                </a>
+                <a href="/family/discussions" class="px-6 py-3 font-semibold text-gray-600 hover:text-navy hover:bg-gray-50">
+                    💭 Discussions
+                </a>
+                <a href="/family/photos" class="px-6 py-3 font-semibold text-gray-600 hover:text-navy hover:bg-gray-50">
+                    📸 Photos
+                </a>
+                <a href="/family/photos/albums" class="px-6 py-3 font-semibold text-gray-600 hover:text-navy hover:bg-gray-50">
+                    🗂️ Albums
+                </a>
+                <a href="/family/store" class="px-6 py-3 font-semibold text-gray-600 hover:text-navy hover:bg-gray-50">
+                    🛍️ Store
+                </a>
+            </div>
+        </div>
+
+        <!-- Shift Filter Tabs -->
+        <div class="bg-white border border-gray-200 rounded-lg mb-8 p-4">
+            <div class="flex flex-wrap gap-2">
+                <a href="/family/roster" class="px-4 py-2 rounded font-semibold text-sm transition {% if not shift_filter %}bg-navy text-white{% else %}bg-gray-100 text-navy hover:bg-gray-200{% endif %}">
+                    All Shifts
+                </a>
+                <a href="/family/roster?shift=A" class="px-4 py-2 rounded font-semibold text-sm transition {% if shift_filter == 'A' %}bg-red-600 text-white{% else %}bg-gray-100 text-navy hover:bg-gray-200{% endif %}">
+                    🔴 A Shift
+                </a>
+                <a href="/family/roster?shift=B" class="px-4 py-2 rounded font-semibold text-sm transition {% if shift_filter == 'B' %}bg-blue-600 text-white{% else %}bg-gray-100 text-navy hover:bg-gray-200{% endif %}">
+                    🔵 B Shift
+                </a>
+                <a href="/family/roster?shift=C" class="px-4 py-2 rounded font-semibold text-sm transition {% if shift_filter == 'C' %}bg-green-600 text-white{% else %}bg-gray-100 text-navy hover:bg-gray-200{% endif %}">
+                    🟢 C Shift
+                </a>
+            </div>
+        </div>
+
+        <!-- Member Directory Grid -->
+        {% if members %}
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {% for member in members %}
+            <div class="bg-white border border-gray-200 rounded-lg overflow-hidden hover:shadow-md transition">
+                <!-- Member Card Header -->
+                <div class="p-6">
+                    <!-- Firefighter Info -->
+                    <div class="flex items-start gap-4 mb-4">
+                        <!-- Circular Avatar -->
+                        <div class="w-16 h-16 rounded-full border-3 border-navy/20 flex items-center justify-center flex-shrink-0 text-sm font-bold text-white overflow-hidden bg-gradient-to-br from-navy to-navy-dark">
+                            {% if member.profile_photo %}
+                                <img src="/static/images/profiles/{{ member.profile_photo }}" alt="{{ member.name }}" class="w-full h-full object-cover">
+                            {% else %}
+                                {{ member.name[0].upper() if member.name else '?' }}
+                            {% endif %}
+                        </div>
+                        
+                        <div class="flex-1">
+                            <h3 class="font-heading font-bold text-navy text-lg">{{ member.name }}</h3>
+                            {% if member.rank %}
+                            <div class="text-fire font-semibold text-sm mb-2">{{ member.rank }}</div>
+                            {% endif %}
+                            {% if member.badge_number %}
+                            <div class="text-xs text-gray-600">Badge #{{ member.badge_number }}</div>
+                            {% endif %}
+                            
+                            <!-- Shift Badge -->
+                            {% if member.shift %}
+                            <div class="mt-2">
+                                {% if member.shift == 'A' %}
+                                <span class="inline-block px-3 py-1 rounded-full text-xs font-bold text-white bg-red-600">🔴 A Shift</span>
+                                {% elif member.shift == 'B' %}
+                                <span class="inline-block px-3 py-1 rounded-full text-xs font-bold text-white bg-blue-600">🔵 B Shift</span>
+                                {% elif member.shift == 'C' %}
+                                <span class="inline-block px-3 py-1 rounded-full text-xs font-bold text-white bg-green-600">🟢 C Shift</span>
+                                {% endif %}
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Spouse Info (if exists) -->
+                    {% if member.spouse_name %}
+                    <div class="border-t border-gray-100 pt-4 mt-4">
+                        <div class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Spouse</div>
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-full border-2 border-navy/20 flex items-center justify-center flex-shrink-0 text-xs font-bold text-white overflow-hidden bg-gradient-to-br from-fire to-fire-dark">
+                                {% if member.spouse_photo %}
+                                    <img src="/static/images/profiles/{{ member.spouse_photo }}" alt="{{ member.spouse_name }}" class="w-full h-full object-cover">
+                                {% else %}
+                                    {{ member.spouse_name[0].upper() if member.spouse_name else '?' }}
+                                {% endif %}
+                            </div>
+                            <div>
+                                <div class="font-semibold text-navy text-sm">{{ member.spouse_name }}</div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="bg-white rounded-lg p-12 text-center">
+            <svg class="w-16 h-16 text-gray-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.856-1.487M15 10a3 3 0 11-6 0 3 3 0 016 0zM6 20v-2a3 3 0 016 0v2H6z"/></svg>
+            <p class="text-gray-500 text-lg">
+                {% if shift_filter %}
+                No members found for {{ shift_filter }} Shift
+                {% else %}
+                No members found
+                {% endif %}
+            </p>
+        </div>
+        {% endif %}
+
+        <!-- Back to home -->
+        <div class="mt-10 text-center">
+            <a href="/family" class="text-gray-400 hover:text-fire text-sm font-medium transition">← Back to Family Portal</a>
+        </div>
+    </div>
+</section>
+{% endblock %}

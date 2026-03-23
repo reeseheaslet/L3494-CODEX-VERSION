@@ -1,0 +1,167 @@
+{% extends "base.html" %}
+{% block title %}Family Portal · Local 3494{% endblock %}
+
+{% block content %}
+<section class="bg-navy py-12">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="text-fire font-heading font-semibold text-xs uppercase tracking-widest mb-2">Family Portal</div>
+        <h1 class="font-heading font-bold text-3xl text-white">Welcome to the Local 3494 Family Portal</h1>
+        <p class="text-gray-400 mt-1">Connected to our firefighting family</p>
+    </div>
+</section>
+<div class="h-1 bg-gradient-to-r from-fire via-red-400 to-fire"></div>
+
+<section class="py-12 bg-gray-50">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+
+        <!-- Family Portal Navigation Tabs -->
+        <div class="bg-white border border-gray-200 rounded-lg mb-8 overflow-hidden">
+            <div class="flex flex-wrap border-b border-gray-200">
+                <a href="/family" class="px-6 py-3 font-semibold text-navy border-b-2 border-fire hover:bg-gray-50">
+                    🏠 Home
+                </a>
+                <a href="/family/roster" class="px-6 py-3 font-semibold text-gray-600 hover:text-navy hover:bg-gray-50">
+                    👥 Directory
+                </a>
+                <a href="/family/events" class="px-6 py-3 font-semibold text-gray-600 hover:text-navy hover:bg-gray-50">
+                    📅 Events
+                </a>
+                <a href="/family/announcements" class="px-6 py-3 font-semibold text-gray-600 hover:text-navy hover:bg-gray-50">
+                    📢 Announcements
+                </a>
+                <a href="/family/discussions" class="px-6 py-3 font-semibold text-gray-600 hover:text-navy hover:bg-gray-50">
+                    💭 Discussions
+                </a>
+                <a href="/family/photos" class="px-6 py-3 font-semibold text-gray-600 hover:text-navy hover:bg-gray-50">
+                    📸 Photos
+                </a>
+                <a href="/family/photos/albums" class="px-6 py-3 font-semibold text-gray-600 hover:text-navy hover:bg-gray-50">
+                    🗂️ Albums
+                </a>
+                <a href="/family/store" class="px-6 py-3 font-semibold text-gray-600 hover:text-navy hover:bg-gray-50">
+                    🛍️ Store
+                </a>
+            </div>
+        </div>
+
+        <!-- Quick Links Grid -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
+
+            <!-- Events -->
+            <a href="/family/events" class="bg-white border border-gray-200 hover:border-fire hover:shadow-md rounded-lg p-6 transition group">
+                <div class="w-10 h-10 bg-fire/10 rounded-lg flex items-center justify-center mb-4 group-hover:bg-fire/20 transition">
+                    <svg class="w-5 h-5 text-fire" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
+                </div>
+                <h3 class="font-heading font-bold text-navy mb-1">Upcoming Events</h3>
+                <p class="text-gray-500 text-sm">See community events and gatherings</p>
+            </a>
+
+            <!-- Directory -->
+            <a href="/family/roster" class="bg-white border border-gray-200 hover:border-fire hover:shadow-md rounded-lg p-6 transition group">
+                <div class="w-10 h-10 bg-fire/10 rounded-lg flex items-center justify-center mb-4 group-hover:bg-fire/20 transition">
+                    <svg class="w-5 h-5 text-fire" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.856-1.487M15 10a3 3 0 11-6 0 3 3 0 016 0zM6 20v-2a3 3 0 016 0v2H6z"/></svg>
+                </div>
+                <h3 class="font-heading font-bold text-navy mb-1">Family Directory</h3>
+                <p class="text-gray-500 text-sm">Meet our firefighters and families</p>
+            </a>
+
+            <!-- Announcements -->
+            <a href="/family/announcements" class="bg-white border border-gray-200 hover:border-fire hover:shadow-md rounded-lg p-6 transition group">
+                <div class="w-10 h-10 bg-fire/10 rounded-lg flex items-center justify-center mb-4 group-hover:bg-fire/20 transition">
+                    <svg class="w-5 h-5 text-fire" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5.882V19.24a1.961 1.961 0 01-2.773-1.753v-5.844m0 0a2.25 2.25 0 00-1.557-2.049 2.25 2.25 0 00-2.659 2.122 2.247 2.247 0 002.773 2.050 2.247 2.247 0 001.557-2.05zM7 13h4m8-8v12m0 0l-3.794-3.794a1 1 0 00-1.414 0L9.172 9.172"/></svg>
+                </div>
+                <h3 class="font-heading font-bold text-navy mb-1">Announcements</h3>
+                <p class="text-gray-500 text-sm">Stay updated on union news</p>
+            </a>
+
+            <!-- Photos -->
+            <a href="/family/photos" class="bg-white border border-gray-200 hover:border-fire hover:shadow-md rounded-lg p-6 transition group">
+                <div class="w-10 h-10 bg-fire/10 rounded-lg flex items-center justify-center mb-4 group-hover:bg-fire/20 transition">
+                    <svg class="w-5 h-5 text-fire" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                </div>
+                <h3 class="font-heading font-bold text-navy mb-1">Photo Gallery</h3>
+                <p class="text-gray-500 text-sm">Share and view family moments</p>
+            </a>
+
+            <!-- Chat -->
+            <a href="/family/chat" class="bg-white border border-gray-200 hover:border-fire hover:shadow-md rounded-lg p-6 transition group">
+                <div class="w-10 h-10 bg-fire/10 rounded-lg flex items-center justify-center mb-4 group-hover:bg-fire/20 transition">
+                    <svg class="w-5 h-5 text-fire" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                </div>
+                <h3 class="font-heading font-bold text-navy mb-1">Family Chat</h3>
+                <p class="text-gray-500 text-sm">Connect with other families</p>
+            </a>
+
+            <!-- Discussions -->
+            <a href="/family/discussions" class="bg-white border border-gray-200 hover:border-fire hover:shadow-md rounded-lg p-6 transition group">
+                <div class="w-10 h-10 bg-fire/10 rounded-lg flex items-center justify-center mb-4 group-hover:bg-fire/20 transition">
+                    <svg class="w-5 h-5 text-fire" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"/></svg>
+                </div>
+                <h3 class="font-heading font-bold text-navy mb-1">Discussions</h3>
+                <p class="text-gray-500 text-sm">Join community discussions</p>
+            </a>
+
+            <!-- Family Store -->
+            <a href="/family/store" class="bg-white border border-gray-200 hover:border-fire hover:shadow-md rounded-lg p-6 transition group">
+                <div class="w-10 h-10 bg-fire/10 rounded-lg flex items-center justify-center mb-4 group-hover:bg-fire/20 transition">
+                    <svg class="w-5 h-5 text-fire" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/></svg>
+                </div>
+                <h3 class="font-heading font-bold text-navy mb-1">Family Store</h3>
+                <p class="text-gray-500 text-sm">Exclusive family apparel</p>
+            </a>
+        </div>
+
+        <!-- Upcoming Events Preview -->
+        {% if upcoming_events %}
+        <div class="bg-white border border-gray-200 rounded-lg p-8 mb-8">
+            <h2 class="font-heading font-bold text-2xl text-navy mb-6">Upcoming Events</h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {% for event in upcoming_events %}
+                <div class="border border-gray-200 rounded-lg p-6 hover:shadow-md transition">
+                    <div class="text-fire font-semibold text-sm mb-2">{{ event.event_date }}</div>
+                    <h3 class="font-heading font-bold text-navy mb-2">{{ event.title }}</h3>
+                    <p class="text-gray-600 text-sm mb-3">📍 {{ event.location }}</p>
+                    <p class="text-gray-700 text-sm line-clamp-2">{{ event.description }}</p>
+                    <a href="/family/events" class="text-fire hover:text-fire-dark text-sm font-semibold mt-4 inline-block">See all events →</a>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Trending Discussions -->
+        {% if trending_discussions %}
+        <div class="bg-white border border-gray-200 rounded-lg p-8 mb-8">
+            <h2 class="font-heading font-bold text-2xl text-navy mb-6">Trending Discussions</h2>
+            <div class="space-y-3">
+                {% for post in trending_discussions %}
+                <a href="/family/discussions/post/{{ post.id }}" class="block p-4 border border-gray-100 hover:border-fire rounded-lg hover:shadow-md transition group">
+                    <div class="flex items-start gap-3">
+                        <div class="w-8 h-8 rounded-full bg-navy text-white flex items-center justify-center text-xs font-bold flex-shrink-0">
+                            {% if post.profile_photo %}
+                                <img src="{{ get_profile_photo(post.author_id) }}" alt="{{ post.author_name }}" class="w-full h-full rounded-full object-cover">
+                            {% else %}
+                                {{ post.author_name[0] if post.author_name else '?' }}
+                            {% endif %}
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <h4 class="font-semibold text-navy group-hover:text-fire transition truncate">{{ post.title }}</h4>
+                            <div class="text-xs text-gray-600">
+                                by {{ post.author_name }} • 💬 {{ post.comment_count }} comment{% if post.comment_count != 1 %}s{% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </a>
+                {% endfor %}
+            </div>
+            <a href="/family/discussions" class="text-fire hover:text-fire-dark text-sm font-semibold mt-4 inline-block">View all discussions →</a>
+        </div>
+        {% endif %}
+
+        <!-- Sign out -->
+        <div class="mt-10 text-center">
+            <a href="/logout" class="text-gray-400 hover:text-fire text-sm font-medium transition">Sign Out</a>
+        </div>
+    </div>
+</section>
+{% endblock %}

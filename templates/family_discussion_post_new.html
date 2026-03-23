@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% block title %}Start a New Discussion · Local 3494{% endblock %}
+
+{% block content %}
+<section class="bg-navy py-12">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="text-fire font-heading font-semibold text-xs uppercase tracking-widest mb-2">Family Portal • Discussions</div>
+        <h1 class="font-heading font-bold text-3xl text-white">Start a New Discussion</h1>
+        <p class="text-gray-400 mt-1">Share your thoughts with the family community</p>
+    </div>
+</section>
+<div class="h-1 bg-gradient-to-r from-fire via-red-400 to-fire"></div>
+
+<section class="py-12 bg-gray-50">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+
+        <div class="bg-white border border-gray-200 rounded-lg p-8">
+            <form method="POST" action="/family/discussions/post/new">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <!-- Category Selection -->
+                <div class="mb-6">
+                    <label for="category_id" class="block text-sm font-semibold text-navy mb-2">
+                        Category *
+                    </label>
+                    <select name="category_id" id="category_id" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-fire focus:ring-2 focus:ring-fire/20">
+                        <option value="">Select a category...</option>
+                        {% for category in categories %}
+                        <option value="{{ category.id }}">{{ category.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- Title -->
+                <div class="mb-6">
+                    <label for="title" class="block text-sm font-semibold text-navy mb-2">
+                        Discussion Title *
+                    </label>
+                    <input type="text" name="title" id="title" required placeholder="What's this discussion about?" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-fire focus:ring-2 focus:ring-fire/20">
+                    <p class="text-xs text-gray-500 mt-1">Keep it clear and descriptive so others know what to expect</p>
+                </div>
+
+                <!-- Body -->
+                <div class="mb-6">
+                    <label for="body" class="block text-sm font-semibold text-navy mb-2">
+                        Discussion Details *
+                    </label>
+                    <textarea name="body" id="body" required placeholder="Share more details, context, or your question..." rows="8" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-fire focus:ring-2 focus:ring-fire/20"></textarea>
+                    <p class="text-xs text-gray-500 mt-1">Be clear and respectful. This will be visible to all family members.</p>
+                </div>
+
+                <!-- Info Box -->
+                <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6 text-sm text-blue-800">
+                    <p class="font-semibold mb-2">📝 Discussion Tips:</p>
+                    <ul class="list-disc list-inside space-y-1 text-xs">
+                        <li>Be specific and provide relevant details</li>
+                        <li>Check if a similar discussion already exists</li>
+                        <li>Be respectful and inclusive</li>
+                        <li>Some categories have automatic expiration (noted above)</li>
+                    </ul>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="flex gap-3">
+                    <button type="submit" class="bg-fire hover:bg-fire-dark text-white font-semibold px-6 py-3 rounded-lg transition">
+                        ✏️ Post Discussion
+                    </button>
+                    <a href="/family/discussions" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold px-6 py-3 rounded-lg transition">
+                        Cancel
+                    </a>
+                </div>
+            </form>
+        </div>
+
+        <!-- Back Link -->
+        <div class="mt-8 text-center">
+            <a href="/family/discussions" class="text-gray-400 hover:text-fire text-sm font-medium transition">← Back to Discussions</a>
+        </div>
+    </div>
+</section>
+{% endblock %}

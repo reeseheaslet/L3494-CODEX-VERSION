@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+{% block title %}Schedule General Membership Meeting · Local 3494{% endblock %}
+
+{% block content %}
+
+<!-- Page Banner -->
+<section class="bg-navy text-white py-12">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between">
+        <div>
+            <h1 class="font-heading font-bold text-3xl md:text-4xl text-white">Schedule GM Meeting</h1>
+        </div>
+        <a href="/members/events" class="text-gray-300 hover:text-white font-semibold text-sm transition">
+            ← Back to Events
+        </a>
+    </div>
+</section>
+
+<!-- Divider bar -->
+<div class="h-1 bg-gradient-to-r from-fire via-red-400 to-fire"></div>
+
+<!-- Main Content -->
+<section class="py-12 bg-gray-50">
+    <div class="max-w-xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-8">
+            {% if is_board %}
+                <!-- Create Meeting Form -->
+                <form method="POST" action="/members/meetings/create" class="space-y-6">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    
+                    <!-- Date Field -->
+                    <div>
+                        <label for="meeting_date" class="block text-sm font-semibold text-navy mb-2">
+                            Meeting Date <span class="text-fire">*</span>
+                        </label>
+                        <input type="date" name="meeting_date" id="meeting_date" required 
+                            class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:border-fire focus:outline-none focus:ring-1 focus:ring-fire">
+                    </div>
+                    
+                    <!-- Time Field -->
+                    <div>
+                        <label for="meeting_time" class="block text-sm font-semibold text-navy mb-2">
+                            Meeting Time <span class="text-fire">*</span>
+                        </label>
+                        <input type="time" name="meeting_time" id="meeting_time" required 
+                            class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:border-fire focus:outline-none focus:ring-1 focus:ring-fire">
+                    </div>
+                    
+                    <!-- Location Field -->
+                    <div>
+                        <label for="location" class="block text-sm font-semibold text-navy mb-2">
+                            Location <span class="text-fire">*</span>
+                        </label>
+                        <input type="text" name="location" id="location" required 
+                            placeholder="e.g. Station 31, Bay Area"
+                            class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:border-fire focus:outline-none focus:ring-1 focus:ring-fire">
+                    </div>
+                    
+                    <!-- Agenda Field -->
+                    <div>
+                        <label for="agenda" class="block text-sm font-semibold text-navy mb-2">
+                            Agenda <span class="text-gray-500 text-xs">(optional)</span>
+                        </label>
+                        <textarea name="agenda" id="agenda" rows="4" 
+                            placeholder="Meeting agenda, topics to be discussed..."
+                            class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:border-fire focus:outline-none focus:ring-1 focus:ring-fire"></textarea>
+                    </div>
+                    
+                    <!-- Submit Button -->
+                    <div class="pt-4">
+                        <button type="submit" class="w-full bg-fire hover:bg-fire-dark text-white font-semibold py-2.5 rounded transition">
+                            Schedule Meeting
+                        </button>
+                    </div>
+                </form>
+            {% else %}
+                <!-- Non-Board Member Message -->
+                <div class="text-center py-8">
+                    <div class="text-4xl mb-4">🔒</div>
+                    <h2 class="font-heading font-bold text-lg text-navy mb-3">Board Members Only</h2>
+                    <p class="text-gray-600 mb-4">
+                        Only board members can schedule General Membership Meetings. 
+                        Contact your board representative if you need to schedule a meeting.
+                    </p>
+                    <a href="/members/events" class="inline-block bg-navy hover:bg-navy-dark text-white font-semibold px-5 py-2.5 rounded transition text-sm">
+                        ← Back to Events
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</section>
+
+{% endblock %}
