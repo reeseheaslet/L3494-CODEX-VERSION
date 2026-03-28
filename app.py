@@ -73,11 +73,12 @@ SMTP_PORT = int(os.environ.get('SMTP_PORT', '587'))
 SMTP_USER = os.environ.get('SMTP_USER', 'reese_joseph14@yahoo.com')
 SMTP_PASSWORD = os.environ.get('SMTP_PASSWORD', 'syantnwvwvjpsara')
 SMTP_FROM = os.environ.get('SMTP_FROM', 'reese_joseph14@yahoo.com')
-BASE_URL = os.environ.get('BASE_URL', 'http://localhost:5002')
+BASE_URL = os.environ.get('BASE_URL', 'https://local3494.pythonanywhere.com')
 
 AGENTS_STATUS_FILE = "/home/reese/.openclaw/workspace/agents_status.json"
 ALLOWED_EXTENSIONS = {'jpg', 'jpeg', 'png', 'gif'}
 UPLOAD_FOLDER = os.path.join(os.path.dirname(__file__), 'static/images/family')
+MEMBER_UPLOAD_FOLDER = os.path.join(os.path.dirname(__file__), 'static/images/members')
 PROFILE_PHOTO_FOLDER = os.path.join(os.path.dirname(__file__), 'static/images/profiles')
 DISCUSSION_ATTACHMENTS_FOLDER = os.path.join(os.path.dirname(__file__), 'static/images/discussion_attachments')
 
@@ -1270,7 +1271,7 @@ def family_photos():
     if selected_album == 'all':
         photos = db.execute("""
             SELECT fp.id, fp.filename, fp.caption, fp.created_at, fp.album_id,
-                   m.name as uploader_name, pa.name as album_name
+                   m.name as uploader_name, pa.name as album_name, fp.uploader_id
             FROM family_photos fp
             LEFT JOIN members m ON fp.uploader_id = m.id
             LEFT JOIN photo_albums pa ON fp.album_id = pa.id
@@ -1282,7 +1283,7 @@ def family_photos():
             album_id = int(selected_album)
             photos = db.execute("""
                 SELECT fp.id, fp.filename, fp.caption, fp.created_at, fp.album_id,
-                       m.name as uploader_name, pa.name as album_name
+                       m.name as uploader_name, pa.name as album_name, fp.uploader_id
                 FROM family_photos fp
                 LEFT JOIN members m ON fp.uploader_id = m.id
                 LEFT JOIN photo_albums pa ON fp.album_id = pa.id
@@ -1292,10 +1293,40 @@ def family_photos():
         except (ValueError, TypeError):
             photos = []
     
+    # Get user's pending photos
+    current_member_id = get_member_id()
+    my_pending_photos = []
+    if current_member_id:
+        my_pending_photos = db.execute("""
+            SELECT fp.id, fp.filename, fp.caption, fp.created_at, fp.album_id,
+                   pa.name as album_name
+            FROM family_photos fp
+            LEFT JOIN photo_albums pa ON fp.album_id = pa.id
+            WHERE fp.status = 'pending' AND fp.uploader_id = ?
+            ORDER BY fp.created_at DESC
+        """, (current_member_id,)).fetchall()
+    
     # Get approved albums for dropdown in upload form
     approved_albums = db.execute("""
         SELECT id, name FROM photo_albums WHERE status = 'approved' ORDER BY name ASC
     """).fetchall()
+    
+    # Fetch comments for approved photos
+    comments = db.execute("""
+        SELECT pc.*, m.name as commenter_name 
+        FROM photo_comments pc 
+        JOIN members m ON pc.commenter_id = m.id 
+        WHERE pc.photo_type = 'family'
+        ORDER BY pc.created_at ASC
+    """).fetchall()
+    
+    # Group comments by photo_id
+    comments_by_photo = {}
+    for comment in comments:
+        photo_id = comment['photo_id']
+        if photo_id not in comments_by_photo:
+            comments_by_photo[photo_id] = []
+        comments_by_photo[photo_id].append(dict(comment))
     
     db.close()
     
@@ -1304,6 +1335,9 @@ def family_photos():
         albums=[dict(a) for a in albums],
         approved_albums=[dict(a) for a in approved_albums],
         selected_album=selected_album,
+        my_pending_photos=[dict(p) for p in my_pending_photos],
+        current_member_id=current_member_id,
+        comments_by_photo=comments_by_photo,
         username=session.get('username', ''),
         role=session.get('role', 'member'))
 
@@ -1413,6 +1447,522 @@ def request_new_album():
     
     flash('Album request submitted for admin approval.', 'success')
     return redirect(url_for('family_photo_albums'))
+
+@app.route('/family/photos/<int:photo_id>/delete', methods=['POST'])
+def family_photo_delete(photo_id):
+    """Delete a family photo (owner or admin only)"""
+    if not require_family_access():
+        return redirect(url_for('login'))
+    
+    db = get_db()
+    photo = db.execute("SELECT * FROM family_photos WHERE id = ?", (photo_id,)).fetchone()
+    
+    if not photo:
+        flash('Photo not found.', 'error')
+        db.close()
+        return redirect(url_for('family_photos'))
+    
+    current_member_id = get_member_id()
+    is_owner = photo['uploader_id'] == current_member_id
+    is_admin = session.get('role') in ['admin', 'super_admin']
+    
+    if not (is_owner or is_admin):
+        flash('You do not have permission to delete this photo.', 'error')
+        db.close()
+        return redirect(url_for('family_photos'))
+    
+    # Delete file from disk
+    try:
+        os.remove(os.path.join(UPLOAD_FOLDER, photo['filename']))
+    except FileNotFoundError:
+        pass
+    
+    # Delete from database
+    db.execute("DELETE FROM family_photos WHERE id = ?", (photo_id,))
+    db.commit()
+    db.close()
+    
+    flash('Photo deleted.', 'success')
+    return redirect(url_for('family_photos'))
+
+@app.route('/family/photos/<int:photo_id>/comment', methods=['POST'])
+def family_photo_comment(photo_id):
+    """Add a comment to a family photo"""
+    if not require_family_access():
+        return redirect(url_for('login'))
+    
+    comment_text = request.form.get('comment', '').strip()
+    
+    if not comment_text:
+        flash('Comment cannot be empty.', 'error')
+        return redirect(url_for('family_photos'))
+    
+    if len(comment_text) > 500:
+        flash('Comment is too long (max 500 characters).', 'error')
+        return redirect(url_for('family_photos'))
+    
+    db = get_db()
+    
+    # Check if photo exists and is approved
+    photo = db.execute("SELECT * FROM family_photos WHERE id = ? AND status = 'approved'", (photo_id,)).fetchone()
+    if not photo:
+        flash('Photo not found or not approved.', 'error')
+        db.close()
+        return redirect(url_for('family_photos'))
+    
+    db.execute("""
+        INSERT INTO photo_comments (photo_id, photo_type, commenter_id, comment)
+        VALUES (?, ?, ?, ?)
+    """, (photo_id, 'family', get_member_id(), comment_text))
+    db.commit()
+    db.close()
+    
+    flash('Comment posted!', 'success')
+    return redirect(url_for('family_photos'))
+
+# Member Photo Routes
+
+@app.route('/members/photos')
+def member_photos_page():
+    """Show member photo wall - only approved photos, organized by album"""
+    if not require_member_access():
+        return redirect(url_for('login'))
+    
+    db = get_db()
+    
+    # Get selected album from query params (default to 'all')
+    selected_album = request.args.get('album', 'all')
+    
+    # Get all approved albums with photo count
+    albums = db.execute("""
+        SELECT mpa.id, mpa.name, COUNT(mp.id) as photo_count
+        FROM member_photo_albums mpa
+        LEFT JOIN member_photos mp ON mpa.id = mp.album_id AND mp.status = 'approved'
+        WHERE mpa.status = 'approved'
+        GROUP BY mpa.id
+        ORDER BY mpa.created_at ASC
+    """).fetchall()
+    
+    # Get approved photos, filtered by album if specified
+    if selected_album == 'all':
+        photos = db.execute("""
+            SELECT mp.id, mp.filename, mp.caption, mp.created_at, mp.album_id,
+                   m.name as uploader_name, mpa.name as album_name, mp.uploader_id
+            FROM member_photos mp
+            LEFT JOIN members m ON mp.uploader_id = m.id
+            LEFT JOIN member_photo_albums mpa ON mp.album_id = mpa.id
+            WHERE mp.status = 'approved'
+            ORDER BY mp.created_at DESC
+        """).fetchall()
+    else:
+        try:
+            album_id = int(selected_album)
+            photos = db.execute("""
+                SELECT mp.id, mp.filename, mp.caption, mp.created_at, mp.album_id,
+                       m.name as uploader_name, mpa.name as album_name, mp.uploader_id
+                FROM member_photos mp
+                LEFT JOIN members m ON mp.uploader_id = m.id
+                LEFT JOIN member_photo_albums mpa ON mp.album_id = mpa.id
+                WHERE mp.status = 'approved' AND mp.album_id = ?
+                ORDER BY mp.created_at DESC
+            """, (album_id,)).fetchall()
+        except (ValueError, TypeError):
+            photos = []
+    
+    # Get user's pending photos
+    current_member_id = get_member_id()
+    my_pending_photos = []
+    if current_member_id:
+        my_pending_photos = db.execute("""
+            SELECT mp.id, mp.filename, mp.caption, mp.created_at, mp.album_id,
+                   mpa.name as album_name
+            FROM member_photos mp
+            LEFT JOIN member_photo_albums mpa ON mp.album_id = mpa.id
+            WHERE mp.status = 'pending' AND mp.uploader_id = ?
+            ORDER BY mp.created_at DESC
+        """, (current_member_id,)).fetchall()
+    
+    # Get approved albums for dropdown in upload form
+    approved_albums = db.execute("""
+        SELECT id, name FROM member_photo_albums WHERE status = 'approved' ORDER BY name ASC
+    """).fetchall()
+    
+    # Fetch comments for approved photos
+    comments = db.execute("""
+        SELECT pc.*, m.name as commenter_name 
+        FROM photo_comments pc 
+        JOIN members m ON pc.commenter_id = m.id 
+        WHERE pc.photo_type = 'member'
+        ORDER BY pc.created_at ASC
+    """).fetchall()
+    
+    # Group comments by photo_id
+    comments_by_photo = {}
+    for comment in comments:
+        photo_id = comment['photo_id']
+        if photo_id not in comments_by_photo:
+            comments_by_photo[photo_id] = []
+        comments_by_photo[photo_id].append(dict(comment))
+    
+    db.close()
+    
+    return render_template('member_photos.html',
+        photos=[dict(p) for p in photos],
+        albums=[dict(a) for a in albums],
+        approved_albums=[dict(a) for a in approved_albums],
+        selected_album=selected_album,
+        my_pending_photos=[dict(p) for p in my_pending_photos],
+        current_member_id=current_member_id,
+        comments_by_photo=comments_by_photo,
+        username=session.get('username', ''),
+        role=session.get('role', 'member'))
+
+@app.route('/members/photos/upload', methods=['POST'])
+def member_photos_upload():
+    """Upload a photo to member portal - requires admin approval before showing"""
+    if not require_member_access():
+        return redirect(url_for('login'))
+    
+    # Check if file is in request
+    if 'photo' not in request.files:
+        flash('No file selected.', 'error')
+        return redirect(url_for('member_photos_page'))
+    
+    file = request.files['photo']
+    caption = request.form.get('caption', '').strip()
+    album_id = request.form.get('album_id', None)
+    
+    if file.filename == '':
+        flash('No file selected.', 'error')
+        return redirect(url_for('member_photos_page'))
+    
+    if not allowed_file(file.filename):
+        flash('Only JPG, PNG, and GIF files are allowed.', 'error')
+        return redirect(url_for('member_photos_page'))
+    
+    # Validate album_id if provided
+    if album_id:
+        try:
+            album_id = int(album_id)
+        except (ValueError, TypeError):
+            album_id = None
+    
+    # Create upload folder if it doesn't exist
+    os.makedirs(MEMBER_UPLOAD_FOLDER, exist_ok=True)
+    
+    # Save file with secure filename
+    filename = secure_filename(file.filename)
+    # Add timestamp to filename to avoid collisions
+    import time
+    filename = f"{int(time.time())}_{filename}"
+    
+    try:
+        file.save(os.path.join(MEMBER_UPLOAD_FOLDER, filename))
+        
+        # Save photo record to database with status='pending'
+        db = get_db()
+        db.execute("""
+            INSERT INTO member_photos (uploader_id, filename, caption, album_id, status)
+            VALUES (?, ?, ?, ?, 'pending')
+        """, (get_member_id(), filename, caption if caption else None, album_id))
+        db.commit()
+        db.close()
+        
+        flash('Photo submitted! It will appear after admin approval.', 'success')
+        return redirect(url_for('member_photos_page'))
+    except Exception as e:
+        flash('An error occurred while uploading the photo. Please try again.', 'error')
+        return redirect(url_for('member_photos_page'))
+
+@app.route('/members/photos/<int:photo_id>/delete', methods=['POST'])
+def member_photo_delete(photo_id):
+    """Delete a member photo (owner or admin only)"""
+    if not require_member_access():
+        return redirect(url_for('login'))
+    
+    db = get_db()
+    photo = db.execute("SELECT * FROM member_photos WHERE id = ?", (photo_id,)).fetchone()
+    
+    if not photo:
+        flash('Photo not found.', 'error')
+        db.close()
+        return redirect(url_for('member_photos_page'))
+    
+    current_member_id = get_member_id()
+    is_owner = photo['uploader_id'] == current_member_id
+    is_admin = session.get('role') in ['admin', 'super_admin']
+    
+    if not (is_owner or is_admin):
+        flash('You do not have permission to delete this photo.', 'error')
+        db.close()
+        return redirect(url_for('member_photos_page'))
+    
+    # Delete file from disk
+    try:
+        os.remove(os.path.join(MEMBER_UPLOAD_FOLDER, photo['filename']))
+    except FileNotFoundError:
+        pass
+    
+    # Delete from database
+    db.execute("DELETE FROM member_photos WHERE id = ?", (photo_id,))
+    db.commit()
+    db.close()
+    
+    flash('Photo deleted.', 'success')
+    return redirect(url_for('member_photos_page'))
+
+@app.route('/members/photos/<int:photo_id>/comment', methods=['POST'])
+def member_photo_comment(photo_id):
+    """Add a comment to a member photo"""
+    if not require_member_access():
+        return redirect(url_for('login'))
+    
+    comment_text = request.form.get('comment', '').strip()
+    
+    if not comment_text:
+        flash('Comment cannot be empty.', 'error')
+        return redirect(url_for('member_photos_page'))
+    
+    if len(comment_text) > 500:
+        flash('Comment is too long (max 500 characters).', 'error')
+        return redirect(url_for('member_photos_page'))
+    
+    db = get_db()
+    
+    # Check if photo exists and is approved
+    photo = db.execute("SELECT * FROM member_photos WHERE id = ? AND status = 'approved'", (photo_id,)).fetchone()
+    if not photo:
+        flash('Photo not found or not approved.', 'error')
+        db.close()
+        return redirect(url_for('member_photos_page'))
+    
+    db.execute("""
+        INSERT INTO photo_comments (photo_id, photo_type, commenter_id, comment)
+        VALUES (?, ?, ?, ?)
+    """, (photo_id, 'member', get_member_id(), comment_text))
+    db.commit()
+    db.close()
+    
+    flash('Comment posted!', 'success')
+    return redirect(url_for('member_photos_page'))
+
+@app.route('/members/photos/albums')
+def member_photo_albums_page():
+    """Show all approved member photo albums"""
+    if not require_member_access():
+        return redirect(url_for('login'))
+    
+    db = get_db()
+    
+    # Get all approved albums with cover photo and count
+    albums = db.execute("""
+        SELECT mpa.id, mpa.name, mpa.description,
+               (SELECT filename FROM member_photos WHERE album_id = mpa.id AND status = 'approved' ORDER BY created_at ASC LIMIT 1) as cover_photo,
+               COUNT(mp.id) as photo_count
+        FROM member_photo_albums mpa
+        LEFT JOIN member_photos mp ON mpa.id = mp.album_id AND mp.status = 'approved'
+        WHERE mpa.status = 'approved'
+        GROUP BY mpa.id
+        ORDER BY mpa.name ASC
+    """).fetchall()
+    
+    db.close()
+    
+    return render_template('member_photo_albums.html',
+        albums=[dict(a) for a in albums],
+        username=session.get('username', ''),
+        role=session.get('role', 'member'))
+
+@app.route('/members/photos/album/request', methods=['POST'])
+def member_request_new_album():
+    """Request a new member photo album"""
+    if not require_member_access():
+        return redirect(url_for('login'))
+    
+    name = request.form.get('name', '').strip()
+    description = request.form.get('description', '').strip()
+    
+    if not name:
+        flash('Album name is required.', 'error')
+        return redirect(url_for('member_photos_page'))
+    
+    db = get_db()
+    db.execute("""
+        INSERT INTO member_photo_albums (name, description, created_by, status)
+        VALUES (?, ?, ?, 'pending')
+    """, (name, description if description else None, get_member_id()))
+    db.commit()
+    db.close()
+    
+    flash('Album request submitted for admin approval.', 'success')
+    return redirect(url_for('member_photos_page'))
+
+# Admin Member Photo Routes
+
+@app.route('/admin/member-photos/queue')
+@require_role('admin', 'super_admin')
+def admin_member_photo_queue():
+    """Show member photo moderation queue - pending photos only"""
+    db = get_db()
+    
+    pending_photos = db.execute("""
+        SELECT mp.id, mp.filename, mp.caption, mp.created_at,
+               m.name as uploader_name, mpa.name as album_name
+        FROM member_photos mp
+        LEFT JOIN members m ON mp.uploader_id = m.id
+        LEFT JOIN member_photo_albums mpa ON mp.album_id = mpa.id
+        WHERE mp.status = 'pending'
+        ORDER BY mp.created_at ASC
+    """).fetchall()
+    
+    db.close()
+    
+    return render_template('admin_member_photo_queue.html',
+        photos=[dict(p) for p in pending_photos],
+        username=session.get('username', ''))
+
+@app.route('/admin/member-photos/approve', methods=['POST'])
+@require_role('admin', 'super_admin')
+def admin_approve_member_photo():
+    """Approve a member photo or all pending photos"""
+    db = get_db()
+    
+    approve_all = request.form.get('approve_all')
+    photo_id = request.form.get('photo_id')
+    
+    if approve_all:
+        db.execute("UPDATE member_photos SET status = 'approved' WHERE status = 'pending'")
+        flash('All pending member photos approved!', 'success')
+    elif photo_id:
+        try:
+            photo_id = int(photo_id)
+            db.execute("UPDATE member_photos SET status = 'approved' WHERE id = ?", (photo_id,))
+            flash('Member photo approved!', 'success')
+        except (ValueError, TypeError):
+            flash('Invalid photo ID.', 'error')
+    else:
+        flash('No photo selected.', 'error')
+    
+    db.commit()
+    db.close()
+    
+    return redirect(url_for('admin_member_photo_queue'))
+
+@app.route('/admin/member-photos/reject', methods=['POST'])
+@require_role('admin', 'super_admin')
+def admin_reject_member_photo():
+    """Reject a member photo"""
+    photo_id = request.form.get('photo_id', '').strip()
+    
+    if not photo_id:
+        flash('No photo selected.', 'error')
+        return redirect(url_for('admin_member_photo_queue'))
+    
+    try:
+        photo_id = int(photo_id)
+    except (ValueError, TypeError):
+        flash('Invalid photo ID.', 'error')
+        return redirect(url_for('admin_member_photo_queue'))
+    
+    db = get_db()
+    db.execute("UPDATE member_photos SET status = 'rejected' WHERE id = ?", (photo_id,))
+    db.commit()
+    db.close()
+    
+    flash('Member photo rejected.', 'success')
+    return redirect(url_for('admin_member_photo_queue'))
+
+@app.route('/admin/member-photos/albums')
+@require_role('admin', 'super_admin')
+def admin_member_photo_albums():
+    """List pending and approved member photo albums"""
+    db = get_db()
+    
+    pending_albums = db.execute("""
+        SELECT mpa.id, mpa.name, mpa.description, mpa.created_by,
+               m.name as creator_name, COUNT(mp.id) as photo_count
+        FROM member_photo_albums mpa
+        LEFT JOIN members m ON mpa.created_by = m.id
+        LEFT JOIN member_photos mp ON mpa.id = mp.album_id
+        WHERE mpa.status = 'pending'
+        GROUP BY mpa.id
+        ORDER BY mpa.created_at ASC
+    """).fetchall()
+    
+    approved_albums = db.execute("""
+        SELECT mpa.id, mpa.name, mpa.description, mpa.created_by,
+               m.name as creator_name, COUNT(mp.id) as photo_count
+        FROM member_photo_albums mpa
+        LEFT JOIN members m ON mpa.created_by = m.id
+        LEFT JOIN member_photos mp ON mpa.id = mp.album_id AND mp.status = 'approved'
+        WHERE mpa.status = 'approved'
+        GROUP BY mpa.id
+        ORDER BY mpa.name ASC
+    """).fetchall()
+    
+    db.close()
+    
+    return render_template('admin_member_photo_albums.html',
+        pending_albums=[dict(a) for a in pending_albums],
+        approved_albums=[dict(a) for a in approved_albums],
+        username=session.get('username', ''))
+
+@app.route('/admin/member-photos/album/approve', methods=['POST'])
+@require_role('admin', 'super_admin')
+def admin_approve_member_album():
+    """Approve a member photo album"""
+    album_id = request.form.get('album_id', '').strip()
+    
+    if not album_id:
+        flash('No album selected.', 'error')
+        return redirect(url_for('admin_member_photo_albums'))
+    
+    try:
+        album_id = int(album_id)
+    except (ValueError, TypeError):
+        flash('Invalid album ID.', 'error')
+        return redirect(url_for('admin_member_photo_albums'))
+    
+    db = get_db()
+    db.execute("UPDATE member_photo_albums SET status = 'approved' WHERE id = ?", (album_id,))
+    db.commit()
+    db.close()
+    
+    flash('Member photo album approved!', 'success')
+    return redirect(url_for('admin_member_photo_albums'))
+
+@app.route('/admin/member-photos/album/delete', methods=['POST'])
+@require_role('admin', 'super_admin')
+def admin_delete_member_album():
+    """Delete a member photo album"""
+    album_id = request.form.get('album_id', '').strip()
+    
+    if not album_id:
+        flash('No album selected.', 'error')
+        return redirect(url_for('admin_member_photo_albums'))
+    
+    try:
+        album_id = int(album_id)
+    except (ValueError, TypeError):
+        flash('Invalid album ID.', 'error')
+        return redirect(url_for('admin_member_photo_albums'))
+    
+    db = get_db()
+    # Delete all photos in the album first
+    photos = db.execute("SELECT filename FROM member_photos WHERE album_id = ?", (album_id,)).fetchall()
+    for photo in photos:
+        try:
+            os.remove(os.path.join(MEMBER_UPLOAD_FOLDER, photo['filename']))
+        except FileNotFoundError:
+            pass
+    
+    db.execute("DELETE FROM member_photos WHERE album_id = ?", (album_id,))
+    db.execute("DELETE FROM member_photo_albums WHERE id = ?", (album_id,))
+    db.commit()
+    db.close()
+    
+    flash('Member photo album deleted.', 'success')
+    return redirect(url_for('admin_member_photo_albums'))
 
 @app.route('/profile/photo/upload', methods=['POST'])
 def upload_profile_photo():

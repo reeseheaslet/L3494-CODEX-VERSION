@@ -488,5 +488,46 @@ def init_db():
         )
     """)
     
+    # Create member_photos table
+    db.execute("""
+        CREATE TABLE IF NOT EXISTS member_photos (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            uploader_id INTEGER NOT NULL,
+            filename TEXT NOT NULL,
+            caption TEXT,
+            album_id INTEGER,
+            status TEXT DEFAULT 'pending',
+            created_at TEXT DEFAULT (datetime('now')),
+            FOREIGN KEY (uploader_id) REFERENCES members(id),
+            FOREIGN KEY (album_id) REFERENCES member_photo_albums(id)
+        )
+    """)
+    
+    # Create member_photo_albums table
+    db.execute("""
+        CREATE TABLE IF NOT EXISTS member_photo_albums (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            description TEXT,
+            created_by INTEGER,
+            created_at TEXT DEFAULT (datetime('now')),
+            status TEXT DEFAULT 'pending',
+            FOREIGN KEY (created_by) REFERENCES members(id)
+        )
+    """)
+    
+    # Create photo_comments table
+    db.execute("""
+        CREATE TABLE IF NOT EXISTS photo_comments (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            photo_id INTEGER NOT NULL,
+            photo_type TEXT NOT NULL,
+            commenter_id INTEGER NOT NULL,
+            comment TEXT NOT NULL,
+            created_at TEXT DEFAULT (datetime('now')),
+            FOREIGN KEY (commenter_id) REFERENCES members(id)
+        )
+    """)
+    
     db.commit()
     db.close()

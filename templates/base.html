@@ -135,16 +135,16 @@
     <!-- Flash Messages -->
     {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
-        <div class="bg-white border-b border-gray-200">
-            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 space-y-2">
-                {% for category, message in messages %}
-                <div class="flex items-center gap-2 px-4 py-2 rounded text-sm font-medium
-                    {% if category == 'success' %}bg-green-50 border border-green-200 text-green-800
-                    {% else %}bg-red-50 border border-red-200 text-red-800{% endif %}">
-                    {% if category == 'success' %}✓{% else %}⚠{% endif %} {{ message }}
+        <div id="flash-messages" class="space-y-2">
+            {% for category, message in messages %}
+            <div class="flash-message {% if category == 'success' %}bg-green-50 border border-green-200 text-green-800{% else %}bg-red-50 border border-red-200 text-red-800{% endif %} flex items-center justify-between gap-2 px-4 py-3 max-w-7xl mx-auto my-2 rounded text-sm font-medium"
+                 data-category="{{ category }}">
+                <div class="flex items-center gap-2">
+                    {% if category == 'success' %}✓{% else %}⚠{% endif %} <span>{{ message }}</span>
                 </div>
-                {% endfor %}
+                <button type="button" class="flash-close flex-shrink-0 hover:opacity-70 transition" aria-label="Close">✕</button>
             </div>
+            {% endfor %}
         </div>
         {% endif %}
     {% endwith %}
@@ -259,6 +259,13 @@
             if (e.target === this) {
                 togglePhotoModal();
             }
+        });
+
+        // Flash message close buttons
+        document.querySelectorAll('.flash-close').forEach(btn => {
+            btn.addEventListener('click', function() {
+                this.closest('.flash-message').remove();
+            });
         });
     </script>
 

@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+{% block title %}Member Photo Albums · Admin · Local 3494{% endblock %}
+
+{% block content %}
+<section class="bg-navy py-12">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="text-fire font-heading font-semibold text-xs uppercase tracking-widest mb-2">Administration</div>
+        <h1 class="font-heading font-bold text-3xl text-white">Member Photo Albums</h1>
+        <p class="text-gray-400 mt-1">Manage member photo album requests</p>
+    </div>
+</section>
+<div class="h-1 bg-gradient-to-r from-fire via-red-400 to-fire"></div>
+
+<section class="py-8 bg-gray-50">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+
+        <!-- Back to Admin -->
+        <div class="mb-6">
+            <a href="/admin" class="text-fire hover:text-fire-dark font-semibold text-sm">← Back to Admin Dashboard</a>
+        </div>
+
+        <!-- Pending Albums -->
+        {% if pending_albums %}
+        <div class="mb-8">
+            <h2 class="font-heading font-bold text-2xl text-navy mb-4">⏳ Pending Album Requests</h2>
+            <div class="bg-white rounded-lg overflow-hidden shadow-md border border-gray-200">
+                <div class="divide-y divide-gray-200">
+                    {% for album in pending_albums %}
+                    <div class="p-6 flex items-start justify-between hover:bg-gray-50 transition">
+                        <div class="flex-1">
+                            <h3 class="font-heading font-bold text-navy text-lg">{{ album.name }}</h3>
+                            {% if album.description %}
+                            <p class="text-gray-600 text-sm mt-1">{{ album.description }}</p>
+                            {% endif %}
+                            <div class="text-xs text-gray-500 mt-2">
+                                Requested by <span class="font-semibold">{{ album.creator_name or 'Unknown' }}</span>
+                                · Photos: {{ album.photo_count }}
+                            </div>
+                        </div>
+                        <div class="flex gap-2 ml-4 flex-shrink-0">
+                            <form method="POST" action="/admin/member-photos/album/approve">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <input type="hidden" name="album_id" value="{{ album.id }}">
+                                <button type="submit" class="bg-green-500 hover:bg-green-600 text-white font-semibold px-4 py-2 rounded transition text-sm">
+                                    ✓ Approve
+                                </button>
+                            </form>
+                            <form method="POST" action="/admin/member-photos/album/delete">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <input type="hidden" name="album_id" value="{{ album.id }}">
+                                <button type="submit" class="bg-red-500 hover:bg-red-600 text-white font-semibold px-4 py-2 rounded transition text-sm">
+                                    🗑️ Delete
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Approved Albums -->
+        {% if approved_albums %}
+        <div>
+            <h2 class="font-heading font-bold text-2xl text-navy mb-4">✓ Approved Albums</h2>
+            <div class="bg-white rounded-lg overflow-hidden shadow-md border border-gray-200">
+                <div class="divide-y divide-gray-200">
+                    {% for album in approved_albums %}
+                    <div class="p-6 flex items-start justify-between hover:bg-gray-50 transition">
+                        <div class="flex-1">
+                            <h3 class="font-heading font-bold text-navy text-lg">{{ album.name }}</h3>
+                            {% if album.description %}
+                            <p class="text-gray-600 text-sm mt-1">{{ album.description }}</p>
+                            {% endif %}
+                            <div class="text-xs text-gray-500 mt-2">
+                                Created by <span class="font-semibold">{{ album.creator_name or 'Unknown' }}</span>
+                                · Photos: {{ album.photo_count }}
+                            </div>
+                        </div>
+                        <form method="POST" action="/admin/member-photos/album/delete" class="flex-shrink-0">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <input type="hidden" name="album_id" value="{{ album.id }}">
+                            <button type="submit" class="bg-red-500 hover:bg-red-600 text-white font-semibold px-4 py-2 rounded transition text-sm">
+                                🗑️ Delete
+                            </button>
+                        </form>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- No albums -->
+        {% if not pending_albums and not approved_albums %}
+        <div class="bg-white rounded-lg p-12 text-center shadow-sm border border-gray-200">
+            <svg class="w-16 h-16 text-gray-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 19a2 2 0 012-2h10a2 2 0 012 2M5 7a2 2 0 012-2h10a2 2 0 012 2m0 0a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2V9a2 2 0 012-2m6 0V5a2 2 0 10-4 0v2m0 0h4"/></svg>
+            <p class="text-gray-700 text-lg font-semibold mb-2">No member photo albums</p>
+            <p class="text-gray-500">No pending or approved albums yet</p>
+        </div>
+        {% endif %}
+
+    </div>
+</section>
+
+{% endblock %}

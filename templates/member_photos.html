@@ -1,12 +1,12 @@
 {% extends "base.html" %}
-{% block title %}Family Photos · Family Portal · Local 3494{% endblock %}
+{% block title %}Photos · Member Portal · Local 3494{% endblock %}
 
 {% block content %}
 <section class="bg-navy py-12">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="text-fire font-heading font-semibold text-xs uppercase tracking-widest mb-2">Family Portal</div>
-        <h1 class="font-heading font-bold text-3xl text-white">Family Photos</h1>
-        <p class="text-gray-400 mt-1">Memories from our firefighter family</p>
+        <div class="text-fire font-heading font-semibold text-xs uppercase tracking-widest mb-2">Member Portal</div>
+        <h1 class="font-heading font-bold text-3xl text-white">Member Photos</h1>
+        <p class="text-gray-400 mt-1">Share memories with your union brothers and sisters</p>
     </div>
 </section>
 <div class="h-1 bg-gradient-to-r from-fire via-red-400 to-fire"></div>
@@ -14,26 +14,23 @@
 <section class="py-12 bg-gray-50">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
-        <!-- Family Portal Navigation Tabs -->
+        <!-- Member Portal Navigation Tabs -->
         <div class="bg-white border border-gray-200 rounded-lg mb-8 overflow-hidden">
             <div class="flex flex-wrap border-b border-gray-200">
-                <a href="/family" class="px-6 py-3 font-semibold text-gray-600 hover:text-navy hover:bg-gray-50">
+                <a href="/members" class="px-6 py-3 font-semibold text-gray-600 hover:text-navy hover:bg-gray-50">
                     🏠 Home
                 </a>
-                <a href="/family/events" class="px-6 py-3 font-semibold text-gray-600 hover:text-navy hover:bg-gray-50">
-                    📅 Events
+                <a href="/members/events" class="px-6 py-3 font-semibold text-gray-600 hover:text-navy hover:bg-gray-50">
+                    🎯 Events
                 </a>
-                <a href="/family/roster" class="px-6 py-3 font-semibold text-gray-600 hover:text-navy hover:bg-gray-50">
-                    👥 Roster
+                <a href="/members/store" class="px-6 py-3 font-semibold text-gray-600 hover:text-navy hover:bg-gray-50">
+                    🛍️ Store
                 </a>
-                <a href="/family/announcements" class="px-6 py-3 font-semibold text-gray-600 hover:text-navy hover:bg-gray-50">
-                    📢 Announcements
+                <a href="/members/discussions" class="px-6 py-3 font-semibold text-gray-600 hover:text-navy hover:bg-gray-50">
+                    💬 Discussions
                 </a>
-                <a href="/family/photos" class="px-6 py-3 font-semibold text-navy border-b-2 border-fire hover:bg-gray-50">
+                <a href="/members/photos" class="px-6 py-3 font-semibold text-navy border-b-2 border-fire hover:bg-gray-50">
                     📸 Photos
-                </a>
-                <a href="/family/chat" class="px-6 py-3 font-semibold text-gray-600 hover:text-navy hover:bg-gray-50">
-                    💬 Chat
                 </a>
             </div>
         </div>
@@ -42,12 +39,12 @@
         {% if albums %}
         <div class="mb-6 bg-white border border-gray-200 rounded-lg overflow-hidden">
             <div class="flex flex-wrap border-b border-gray-200">
-                <a href="/family/photos?album=all" class="px-4 py-3 font-semibold text-sm
+                <a href="/members/photos?album=all" class="px-4 py-3 font-semibold text-sm
                     {% if selected_album == 'all' %}text-white bg-navy{% else %}text-gray-600 hover:text-navy hover:bg-gray-50{% endif %} transition">
                     📷 All Photos
                 </a>
                 {% for album in albums %}
-                <a href="/family/photos?album={{ album.id }}" class="px-4 py-3 font-semibold text-sm
+                <a href="/members/photos?album={{ album.id }}" class="px-4 py-3 font-semibold text-sm
                     {% if selected_album == album.id|string %}text-white bg-navy{% else %}text-gray-600 hover:text-navy hover:bg-gray-50{% endif %} transition">
                     {{ album.name }} ({{ album.photo_count }})
                 </a>
@@ -61,7 +58,7 @@
             <h2 class="font-heading font-bold text-2xl text-navy mb-2">Upload Photo</h2>
             <p class="text-gray-500 text-sm mb-6">Photos require admin approval before appearing</p>
             
-            <form method="POST" action="/family/photos/upload" enctype="multipart/form-data" class="space-y-4">
+            <form method="POST" action="/members/photos/upload" enctype="multipart/form-data" class="space-y-4">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <div>
                     <label for="file" class="block text-sm font-semibold text-navy mb-2">Select Photo *</label>
@@ -89,6 +86,7 @@
                 <div>
                     <label for="album_id" class="block text-sm font-semibold text-navy mb-2">Album</label>
                     <select id="album_id" name="album_id" class="w-full border border-gray-300 rounded px-4 py-2 text-sm focus:border-fire focus:outline-none focus:ring-1 focus:ring-fire">
+                        <option value="">Select an album (optional)</option>
                         {% for album in approved_albums %}
                         <option value="{{ album.id }}">{{ album.name }}</option>
                         {% endfor %}
@@ -97,6 +95,18 @@
                 {% endif %}
 
                 <button type="submit" class="bg-fire hover:bg-fire-dark text-white font-semibold px-6 py-2 rounded transition text-sm">Upload Photo</button>
+            </form>
+        </div>
+
+        <!-- Album Request Card -->
+        <div class="bg-white border border-gray-200 rounded-lg p-6 mb-8">
+            <h3 class="font-heading font-bold text-navy mb-3">📸 Don't see your album?</h3>
+            <p class="text-gray-600 text-sm mb-4">Request a new album for organizing your photos</p>
+            <form method="POST" action="/members/photos/album/request" class="space-y-3">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="text" name="name" placeholder="Album name" required class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:border-fire focus:outline-none" maxlength="100">
+                <input type="text" name="description" placeholder="Album description (optional)" class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:border-fire focus:outline-none" maxlength="250">
+                <button type="submit" class="bg-fire hover:bg-fire-dark text-white font-semibold px-4 py-2 rounded transition text-sm">Request Album</button>
             </form>
         </div>
 
@@ -110,7 +120,7 @@
                 {% for photo in my_pending_photos %}
                 <div class="bg-gray-50 rounded-lg overflow-hidden border-2 border-yellow-200">
                     <div class="relative bg-gray-200 h-32">
-                        <img src="/static/images/family/{{ photo.filename }}" 
+                        <img src="/static/images/members/{{ photo.filename }}" 
                              alt="{{ photo.caption }}" 
                              class="w-full h-full object-cover">
                         <div class="absolute top-0 right-0 bg-yellow-400 text-yellow-900 text-xs font-bold px-2 py-1 rounded-bl">⏳ Pending</div>
@@ -125,7 +135,7 @@
                     </div>
                     <!-- Delete button for pending photo -->
                     <div class="p-2 border-t">
-                        <form method="POST" action="/family/photos/{{ photo.id }}/delete">
+                        <form method="POST" action="/members/photos/{{ photo.id }}/delete">
                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                             <button type="submit" class="w-full text-xs bg-red-500 hover:bg-red-600 text-white font-semibold py-1 rounded transition">🗑️ Delete</button>
                         </form>
@@ -142,7 +152,7 @@
             {% for photo in photos %}
             <div class="photo-item bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition" data-photo-id="{{ photo.id }}">
                 <div class="relative bg-gray-200 overflow-hidden h-64 sm:h-72 cursor-pointer group">
-                    <img src="/static/images/family/{{ photo.filename }}" 
+                    <img src="/static/images/members/{{ photo.filename }}" 
                          alt="{{ photo.caption }}" 
                          class="w-full h-full object-cover group-hover:scale-105 transition duration-300"
                          loading="lazy">
@@ -171,7 +181,7 @@
                         {% endif %}
                         
                         <!-- Comment Form -->
-                        <form method="POST" action="/family/photos/{{ photo.id }}/comment" class="flex gap-2">
+                        <form method="POST" action="/members/photos/{{ photo.id }}/comment" class="flex gap-2">
                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                             <input type="text" name="comment" placeholder="Add a comment..." maxlength="500" class="flex-1 text-xs border border-gray-300 rounded px-2 py-1 focus:border-fire focus:outline-none">
                             <button type="submit" class="text-xs bg-navy text-white px-3 py-1 rounded hover:bg-navy-dark transition">Post</button>
@@ -180,7 +190,7 @@
                     
                     <!-- Delete Button (owner or admin only) -->
                     {% if session.get('role') in ['admin', 'super_admin'] or photo.uploader_id == current_member_id %}
-                    <form method="POST" action="/family/photos/{{ photo.id }}/delete" class="mt-3">
+                    <form method="POST" action="/members/photos/{{ photo.id }}/delete" class="mt-3">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <button type="submit" class="w-full text-xs bg-red-500 hover:bg-red-600 text-white font-semibold py-1 rounded transition">🗑️ Delete</button>
                     </form>
@@ -196,41 +206,12 @@
         </div>
         {% endif %}
 
-        <!-- Back to home -->
+        <!-- Back to members -->
         <div class="mt-10 text-center">
-            <a href="/family" class="text-gray-400 hover:text-fire text-sm font-medium transition">← Back to Family Portal</a>
+            <a href="/members" class="text-gray-400 hover:text-fire text-sm font-medium transition">← Back to Member Portal</a>
         </div>
     </div>
 </section>
-
-<!-- Lightbox Modal -->
-<div id="lightbox" class="hidden fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4 overscroll-none">
-    <div class="relative max-w-4xl w-full max-h-[90vh] flex flex-col">
-        <!-- Close Button -->
-        <button id="lightbox-close" class="absolute -top-10 -right-10 text-white hover:text-gray-300 z-10 transition">
-            <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
-        </button>
-
-        <!-- Navigation Buttons -->
-        <button id="lightbox-prev" class="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-12 text-white hover:text-gray-300 z-10 transition hidden md:block">
-            <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
-        </button>
-
-        <button id="lightbox-next" class="absolute right-0 top-1/2 -translate-y-1/2 translate-x-12 text-white hover:text-gray-300 z-10 transition hidden md:block">
-            <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"/></svg>
-        </button>
-
-        <!-- Image Container -->
-        <div class="flex-1 flex items-center justify-center bg-black overflow-auto">
-            <img id="lightbox-image" src="" alt="" class="max-w-full max-h-full object-contain">
-        </div>
-
-        <!-- Caption -->
-        <div class="bg-black/90 text-white p-4 text-center">
-            <p id="lightbox-caption" class="text-sm md:text-base"></p>
-        </div>
-    </div>
-</div>
 
 <script>
 function updateFileName(input) {
@@ -251,89 +232,6 @@ function updateFileName(input) {
         document.getElementById('thumbnail-preview').classList.add('hidden');
     }
 }
-
-// Lightbox functionality
-const lightbox = document.getElementById('lightbox');
-const lightboxImage = document.getElementById('lightbox-image');
-const lightboxCaption = document.getElementById('lightbox-caption');
-const lightboxClose = document.getElementById('lightbox-close');
-const lightboxPrev = document.getElementById('lightbox-prev');
-const lightboxNext = document.getElementById('lightbox-next');
-const photoItems = document.querySelectorAll('.photo-item');
-
-let currentImageIndex = 0;
-let visibleImages = Array.from(photoItems);
-
-function openLightbox(photoId) {
-    const index = visibleImages.findIndex(item => item.dataset.photoId === photoId);
-    if (index !== -1) {
-        currentImageIndex = index;
-        showLightboxImage();
-        lightbox.classList.remove('hidden');
-        document.body.style.overflow = 'hidden';
-    }
-}
-
-function showLightboxImage() {
-    if (visibleImages.length === 0) return;
-    
-    const item = visibleImages[currentImageIndex];
-    const img = item.querySelector('img');
-    const captionElem = item.querySelector('[class*="text-gray"]');
-    
-    lightboxImage.src = img.src;
-    lightboxImage.alt = img.alt;
-    lightboxCaption.textContent = captionElem ? captionElem.textContent : '';
-
-    // Show/hide nav buttons
-    lightboxPrev.style.display = visibleImages.length > 1 ? 'block' : 'none';
-    lightboxNext.style.display = visibleImages.length > 1 ? 'block' : 'none';
-}
-
-function closeLightbox() {
-    lightbox.classList.add('hidden');
-    document.body.style.overflow = '';
-}
-
-// Photo item click handler
-photoItems.forEach(item => {
-    item.addEventListener('click', () => {
-        openLightbox(item.dataset.photoId);
-    });
-});
-
-// Lightbox controls
-lightboxClose.addEventListener('click', closeLightbox);
-
-lightboxPrev.addEventListener('click', () => {
-    currentImageIndex = (currentImageIndex - 1 + visibleImages.length) % visibleImages.length;
-    showLightboxImage();
-});
-
-lightboxNext.addEventListener('click', () => {
-    currentImageIndex = (currentImageIndex + 1) % visibleImages.length;
-    showLightboxImage();
-});
-
-// Keyboard navigation
-document.addEventListener('keydown', (e) => {
-    if (lightbox.classList.contains('hidden')) return;
-    
-    if (e.key === 'Escape') closeLightbox();
-    if (e.key === 'ArrowLeft') {
-        currentImageIndex = (currentImageIndex - 1 + visibleImages.length) % visibleImages.length;
-        showLightboxImage();
-    }
-    if (e.key === 'ArrowRight') {
-        currentImageIndex = (currentImageIndex + 1) % visibleImages.length;
-        showLightboxImage();
-    }
-});
-
-// Close lightbox on background click
-lightbox.addEventListener('click', (e) => {
-    if (e.target === lightbox) closeLightbox();
-});
 </script>
 
 {% endblock %}

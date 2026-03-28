@@ -398,9 +398,10 @@
             <h2 class="font-heading font-bold text-xl text-navy mb-4">Photo Management</h2>
             
             <div class="space-y-4">
+                <!-- Family Photos -->
                 <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
                     <p class="text-blue-800 text-sm mb-3">
-                        <strong>Photo Moderation:</strong> Manage family photo uploads and approve/reject submissions.
+                        <strong>Family Photo Moderation:</strong> Manage family photo uploads and approve/reject submissions.
                     </p>
                     <div class="flex gap-3">
                         <a href="/admin/photos/queue" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded font-semibold transition text-sm flex items-center gap-2">
@@ -410,6 +411,21 @@
                             {% endif %}
                         </a>
                         <a href="/admin/photos/albums" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded font-semibold transition text-sm">
+                            🗂️ Manage Albums
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Member Photos -->
+                <div class="bg-purple-50 border border-purple-200 rounded-lg p-4">
+                    <p class="text-purple-800 text-sm mb-3">
+                        <strong>Member Photo Moderation:</strong> Manage member photo uploads and approve/reject submissions.
+                    </p>
+                    <div class="flex gap-3">
+                        <a href="/admin/member-photos/queue" class="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded font-semibold transition text-sm">
+                            📋 Review Queue
+                        </a>
+                        <a href="/admin/member-photos/albums" class="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded font-semibold transition text-sm">
                             🗂️ Manage Albums
                         </a>
                     </div>
