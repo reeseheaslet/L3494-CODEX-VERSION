@@ -1,6 +1,6 @@
 {
   "name": "Local 3494",
-  "short_name": "Local 3494",
+  "short_name": "Local3494",
   "start_url": "/members",
   "display": "standalone",
   "background_color": "#1e3a5c",
@@ -14,6 +14,11 @@
     {
       "src": "/static/icons/icon-512.png",
       "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "/static/icons/apple-touch-icon.png",
+      "sizes": "180x180",
       "type": "image/png"
     }
   ]
