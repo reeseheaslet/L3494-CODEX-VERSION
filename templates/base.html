@@ -256,6 +256,68 @@
             }
         });
     </script>
+
+    <!-- Firebase PWA -->
+    {% if session.get('user_id') or session.get('family_user_id') %}
+    <link rel="manifest" href="/static/manifest.json">
+    <meta name="theme-color" content="#1e3a5c">
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging-compat.js"></script>
+    <script>
+      const firebaseConfig = {
+        apiKey: "AIzaSyC9E1HsFXzkQ8YuIzHd4TSPoZYRt7Zils4",
+        authDomain: "local3494-25a9f.firebaseapp.com",
+        projectId: "local3494-25a9f",
+        storageBucket: "local3494-25a9f.firebasestorage.app",
+        messagingSenderId: "567225617879",
+        appId: "1:567225617879:web:7ff9d46c8e620598880f92"
+      };
+      firebase.initializeApp(firebaseConfig);
+
+      const messaging = firebase.messaging();
+      const VAPID_KEY = 'BF7L_2mEllcUChbYYwM2XecbM-C_Tq1BaO4VsxS31_A9mAEUn_G7hFbD4QpKJYlF8w5O5Sv13gQXJy-42hZw8ps';
+
+      async function requestNotificationPermission() {
+        try {
+          const permission = await Notification.requestPermission();
+          if (permission === 'granted') {
+            const token = await messaging.getToken({ vapidKey: VAPID_KEY });
+            await fetch('/api/push/register', {
+              method: 'POST',
+              headers: {'Content-Type': 'application/json', 'X-CSRFToken': document.querySelector('meta[name=csrf-token]')?.content || ''},
+              body: JSON.stringify({ token })
+            });
+          }
+        } catch (err) {
+          console.log('Notification setup:', err);
+        }
+      }
+
+      // Register service worker
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('/firebase-messaging-sw.js')
+          .then(function(registration) {
+            console.log('Service Worker registered:', registration);
+          })
+          .catch(function(error) {
+            console.log('Service Worker registration failed:', error);
+          });
+      }
+
+      // Auto-request if user is logged in and hasn't been asked
+      if ('Notification' in window && Notification.permission === 'default') {
+        // Delay 3 seconds so it's not jarring on page load
+        setTimeout(requestNotificationPermission, 3000);
+      }
+
+      messaging.onMessage(function(payload) {
+        // Foreground notification — show as a toast
+        console.log('Foreground notification:', payload);
+        // You can add a toast UI here if desired
+      });
+    </script>
+    {% endif %}
+
     {% block scripts %}{% endblock %}
 </body>
 </html>

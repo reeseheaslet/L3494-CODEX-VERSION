@@ -3,20 +3,39 @@ import json
 import secrets
 import smtplib
 import threading
+import requests
 from datetime import datetime, timedelta
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from functools import wraps
-from flask import Flask, render_template, request, redirect, url_for, session, flash
+from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify, send_from_directory
 from flask_wtf.csrf import CSRFProtect
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 from db import get_db, init_db
+import firebase_admin
+from firebase_admin import credentials, messaging as fcm_messaging
 
 app = Flask(__name__)
 app.secret_key = os.environ.get('FLASK_SECRET_KEY', 'union-dev-secret-change-in-prod')
 app.config['WTF_CSRF_SECRET_KEY'] = os.environ.get('FLASK_SECRET_KEY', 'union-dev-secret-change-in-prod')
 csrf = CSRFProtect(app)
+
+# Initialize Firebase Admin SDK
+_firebase_initialized = False
+def init_firebase():
+    global _firebase_initialized
+    if not _firebase_initialized:
+        try:
+            cred_path = os.path.join(os.path.dirname(__file__), 'firebase-service-account.json')
+            cred = credentials.Certificate(cred_path)
+            firebase_admin.initialize_app(cred)
+            _firebase_initialized = True
+            print("[Firebase] Admin SDK initialized")
+        except Exception as e:
+            print(f"[Firebase] Failed to initialize: {e}")
+
+init_firebase()
 
 @app.context_processor
 def inject_notifications():
@@ -1220,6 +1239,9 @@ def family_announcements_post():
     db.commit()
     db.close()
     
+    announcement_snippet = content[:100]
+    send_push_notification('family_announcements', '📣 Family Announcement', announcement_snippet)
+    
     flash('Announcement posted successfully!', 'success')
     return redirect(url_for('family_announcements'))
 
@@ -1506,6 +1528,9 @@ def family_chat_send():
     """, (get_member_id(), message))
     db.commit()
     db.close()
+    
+    message_snippet = message[:100]
+    send_push_notification('family_chat', 'New Family Chat', message_snippet, exclude_user_id=get_member_id())
     
     return redirect(url_for('family_chat'))
 
@@ -2256,6 +2281,8 @@ def members_events_create():
     db.commit()
     db.close()
     
+    send_push_notification('events', 'New Event Posted', title)
+    
     flash('Event created successfully!', 'success')
     return redirect(url_for('members_events'))
 
@@ -2538,6 +2565,8 @@ def members_meetings_create():
     db.commit()
     db.close()
     
+    send_push_notification('meetings', '📢 Membership Meeting', f"A new meeting has been scheduled")
+    
     flash('General Membership Meeting scheduled!', 'success')
     return redirect(url_for('members_events'))
 
@@ -2648,6 +2677,9 @@ def members_chat_send():
     """, (get_member_id(), message))
     db.commit()
     db.close()
+    
+    message_snippet = message[:100]
+    send_push_notification('member_chat', 'New Member Chat', message_snippet, exclude_user_id=get_member_id())
     
     return redirect(url_for('members_chat'))
 
@@ -2807,9 +2839,11 @@ def new_discussion_post():
             VALUES (?, ?, ?, ?, ?)
         """, (category_id, get_member_id(), title, body, expires_at))
         db.commit()
+        db.close()
+        
+        send_push_notification('family_discuss', 'New Family Discussion', title)
         
         flash('Post created successfully!', 'success')
-        db.close()
         return redirect(url_for('family_discussions'))
     
     # GET: show form
@@ -3162,6 +3196,9 @@ def new_member_discussion():
         )
         db.commit()
         db.close()
+        
+        send_push_notification('member_discuss_general', 'New Discussion', title)
+        
         flash('Discussion posted!', 'success')
         return redirect(url_for('member_discussions'))
     db.close()
@@ -3337,6 +3374,240 @@ def run_migrations():
         pass
     
     db.close()
+
+
+# ========== PWA and Push Notifications Routes ==========
+
+@app.route('/firebase-messaging-sw.js')
+def firebase_sw():
+    """Serve Firebase messaging service worker from root path"""
+    return send_from_directory('static', 'firebase-messaging-sw.js', mimetype='application/javascript')
+
+
+def send_push_notification(category, title, body, exclude_user_id=None):
+    """Send push notification to all users with that category enabled."""
+    if not _firebase_initialized:
+        print(f"[PUSH STUB] Firebase not initialized. Would send: {title}: {body}")
+        return
+    
+    db = get_db()
+    try:
+        # Build query to get tokens for users who have this category enabled
+        query = """
+            SELECT pt.token FROM push_tokens pt
+            JOIN notification_preferences np ON pt.user_id = np.user_id
+            WHERE np.category = ? AND np.enabled = 1
+        """
+        params = [category]
+        if exclude_user_id:
+            query += " AND pt.user_id != ?"
+            params.append(exclude_user_id)
+        
+        tokens = [row['token'] for row in db.execute(query, params).fetchall()]
+        
+        if not tokens:
+            return
+        
+        # Send to each token individually (handle invalid tokens)
+        invalid_tokens = []
+        for token in tokens:
+            try:
+                message = fcm_messaging.Message(
+                    notification=fcm_messaging.Notification(
+                        title=title,
+                        body=body,
+                    ),
+                    token=token,
+                )
+                fcm_messaging.send(message)
+            except Exception as e:
+                err_str = str(e)
+                if 'registration-token-not-registered' in err_str or 'invalid-registration-token' in err_str:
+                    invalid_tokens.append(token)
+                else:
+                    print(f"[PUSH] Error sending to token: {e}")
+        
+        # Clean up invalid tokens
+        if invalid_tokens:
+            for token in invalid_tokens:
+                db.execute("DELETE FROM push_tokens WHERE token = ?", [token])
+            db.commit()
+    
+    except Exception as e:
+        print(f"[PUSH] Error in send_push_notification: {e}")
+    
+    finally:
+        db.close()
+
+
+@app.route('/api/push/register', methods=['POST'])
+def register_push_token():
+    """Register a device token for push notifications"""
+    if 'user_id' not in session:
+        return jsonify({'success': False, 'error': 'Not logged in'}), 401
+    
+    data = request.get_json()
+    token = data.get('token', '').strip()
+    
+    if not token:
+        return jsonify({'success': False, 'error': 'Token required'}), 400
+    
+    try:
+        db = get_db()
+        
+        # Check if token already exists for this user
+        existing = db.execute(
+            "SELECT id FROM push_tokens WHERE user_id = ? AND token = ?",
+            (session['user_id'], token)
+        ).fetchone()
+        
+        if not existing:
+            # Insert new token
+            db.execute(
+                "INSERT INTO push_tokens (user_id, token) VALUES (?, ?)",
+                (session['user_id'], token)
+            )
+            db.commit()
+        
+        db.close()
+        return jsonify({'success': True})
+    except Exception as e:
+        print(f"[ERROR] Failed to register push token: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/push/preferences', methods=['GET', 'POST'])
+def push_preferences():
+    """Get or update notification preferences"""
+    if 'user_id' not in session:
+        return jsonify({'success': False, 'error': 'Not logged in'}), 401
+    
+    db = get_db()
+    
+    if request.method == 'GET':
+        # Return current preferences
+        prefs = db.execute(
+            "SELECT category, enabled FROM notification_preferences WHERE user_id = ?",
+            (session['user_id'],)
+        ).fetchall()
+        db.close()
+        
+        prefs_dict = {p['category']: bool(p['enabled']) for p in prefs}
+        return jsonify({'success': True, 'preferences': prefs_dict})
+    
+    elif request.method == 'POST':
+        # Update preferences
+        data = request.get_json()
+        
+        # Get all notification categories
+        categories = [
+            'events', 'meetings', 'member_chat',
+            'member_discuss_general', 'member_discuss_union', 'member_discuss_social', 'member_discuss_questions',
+            'family_events', 'family_chat', 'family_discuss', 'family_announcements'
+        ]
+        
+        try:
+            for category in categories:
+                enabled = data.get(category, True)
+                
+                # Check if preference exists
+                existing = db.execute(
+                    "SELECT id FROM notification_preferences WHERE user_id = ? AND category = ?",
+                    (session['user_id'], category)
+                ).fetchone()
+                
+                if existing:
+                    # Update existing
+                    db.execute(
+                        "UPDATE notification_preferences SET enabled = ? WHERE user_id = ? AND category = ?",
+                        (1 if enabled else 0, session['user_id'], category)
+                    )
+                else:
+                    # Insert new
+                    db.execute(
+                        "INSERT INTO notification_preferences (user_id, category, enabled) VALUES (?, ?, ?)",
+                        (session['user_id'], category, 1 if enabled else 0)
+                    )
+            
+            db.commit()
+            db.close()
+            return jsonify({'success': True})
+        except Exception as e:
+            db.close()
+            print(f"[ERROR] Failed to update preferences: {str(e)}")
+            return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/members/get-the-app')
+def member_get_app():
+    """Member PWA install page"""
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    
+    db = get_db()
+    
+    # Get user's current notification preferences
+    prefs = db.execute(
+        "SELECT category, enabled FROM notification_preferences WHERE user_id = ?",
+        (session['user_id'],)
+    ).fetchall()
+    db.close()
+    
+    # Convert to dict with defaults
+    preferences = {
+        'events': True,
+        'meetings': True,
+        'member_chat': True,
+        'member_discuss_general': True,
+        'member_discuss_union': True,
+        'member_discuss_social': True,
+        'member_discuss_questions': True,
+        'family_events': True,
+        'family_chat': True,
+        'family_discuss': True,
+        'family_announcements': True
+    }
+    
+    for pref in prefs:
+        preferences[pref['category']] = bool(pref['enabled'])
+    
+    return render_template('member_get_app.html',
+        username=session.get('username', ''),
+        role=session.get('role', 'member'),
+        preferences=preferences)
+
+
+@app.route('/family/get-the-app')
+def family_get_app():
+    """Family PWA install page"""
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    
+    db = get_db()
+    
+    # Get user's current notification preferences
+    prefs = db.execute(
+        "SELECT category, enabled FROM notification_preferences WHERE user_id = ?",
+        (session['user_id'],)
+    ).fetchall()
+    db.close()
+    
+    # Convert to dict with defaults
+    preferences = {
+        'family_events': True,
+        'family_chat': True,
+        'family_discuss': True,
+        'family_announcements': True
+    }
+    
+    for pref in prefs:
+        if pref['category'] in preferences:
+            preferences[pref['category']] = bool(pref['enabled'])
+    
+    return render_template('family_get_app.html',
+        username=session.get('username', ''),
+        role=session.get('role', 'member'),
+        preferences=preferences)
 
 
 if __name__ == '__main__':

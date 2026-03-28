@@ -465,5 +465,28 @@ def init_db():
         )
     """)
     
+    # Create push_tokens table for PWA notifications
+    db.execute("""
+        CREATE TABLE IF NOT EXISTS push_tokens (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            token TEXT NOT NULL UNIQUE,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES members(id)
+        )
+    """)
+    
+    # Create notification_preferences table for PWA notification categories
+    db.execute("""
+        CREATE TABLE IF NOT EXISTS notification_preferences (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            category TEXT NOT NULL,
+            enabled INTEGER NOT NULL DEFAULT 1,
+            UNIQUE(user_id, category),
+            FOREIGN KEY (user_id) REFERENCES members(id)
+        )
+    """)
+    
     db.commit()
     db.close()

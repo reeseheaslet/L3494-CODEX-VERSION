@@ -18,3 +18,7 @@ __pycache__/
 # PA credentials (keep local only)
 pythonanywhere_creds.md
 PHASE_3_SUMMARY.md
+
+# Firebase service account (secret — upload to PA manually)
+firebase-service-account.json
+firebase_config.md
