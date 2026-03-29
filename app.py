@@ -4088,6 +4088,22 @@ def register_push_token():
                 "INSERT INTO push_tokens (user_id, token) VALUES (?, ?)",
                 (session['user_id'], token)
             )
+            # Seed default notification preferences for this user if not already set
+            default_categories = [
+                'events', 'meetings', 'member_chat',
+                'member_discuss_general', 'member_discuss_union', 'member_discuss_social', 'member_discuss_questions',
+                'family_events', 'family_chat', 'family_discuss', 'family_announcements'
+            ]
+            for cat in default_categories:
+                exists = db.execute(
+                    "SELECT id FROM notification_preferences WHERE user_id = ? AND category = ?",
+                    (session['user_id'], cat)
+                ).fetchone()
+                if not exists:
+                    db.execute(
+                        "INSERT INTO notification_preferences (user_id, category, enabled) VALUES (?, ?, 1)",
+                        (session['user_id'], cat)
+                    )
             db.commit()
         
         db.close()
