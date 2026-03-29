@@ -12,11 +12,36 @@ firebase.initializeApp({
 
 const messaging = firebase.messaging();
 
+// Firebase compat SDK background handler (Android/Chrome)
 messaging.onBackgroundMessage(function(payload) {
-  const notificationTitle = payload.notification.title;
+  const notificationTitle = payload.notification?.title || 'Local 3494';
   const notificationOptions = {
-    body: payload.notification.body,
+    body: payload.notification?.body || '',
     icon: '/static/icons/icon-192.png'
   };
   self.registration.showNotification(notificationTitle, notificationOptions);
+});
+
+// Direct push event listener — required for iOS PWA and more reliable across all platforms
+self.addEventListener('push', function(event) {
+  let title = 'Local 3494';
+  let body = '';
+
+  if (event.data) {
+    try {
+      const data = event.data.json();
+      title = data.notification?.title || data.data?.title || title;
+      body = data.notification?.body || data.data?.body || body;
+    } catch (e) {
+      body = event.data.text();
+    }
+  }
+
+  event.waitUntil(
+    self.registration.showNotification(title, {
+      body: body,
+      icon: '/static/icons/icon-192.png',
+      badge: '/static/icons/icon-192.png'
+    })
+  );
 });
