@@ -3935,6 +3935,37 @@ def run_migrations():
         # Table already exists, that's fine
         pass
     
+    # Create push_tokens table if it doesn't exist
+    try:
+        db.execute("""
+            CREATE TABLE IF NOT EXISTS push_tokens (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                token TEXT NOT NULL UNIQUE,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES members(id)
+            )
+        """)
+        db.commit()
+    except Exception:
+        pass
+
+    # Create notification_preferences table if it doesn't exist
+    try:
+        db.execute("""
+            CREATE TABLE IF NOT EXISTS notification_preferences (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                category TEXT NOT NULL,
+                enabled INTEGER NOT NULL DEFAULT 1,
+                UNIQUE(user_id, category),
+                FOREIGN KEY (user_id) REFERENCES members(id)
+            )
+        """)
+        db.commit()
+    except Exception:
+        pass
+
     # Add section column to discussion_categories if it doesn't exist
     try:
         db.execute("ALTER TABLE discussion_categories ADD COLUMN section TEXT DEFAULT 'family'")
@@ -4201,8 +4232,8 @@ def family_get_app():
 
 
 # Run startup tasks at module level so they execute on WSGI import (PythonAnywhere)
-# All operations use IF NOT EXISTS / try-except so re-running is always safe
-init_db()
+# NOTE: init_db() is NOT called here — it's slow (seeding) and only needed for fresh local dev.
+# All new tables/columns must be added to run_migrations() instead.
 run_migrations()
 start_background_tasks()
 
