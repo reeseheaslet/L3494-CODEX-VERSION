@@ -10,19 +10,20 @@ firebase.initializeApp({
   appId: "1:567225617879:web:7ff9d46c8e620598880f92"
 });
 
-const messaging = firebase.messaging();
+// Initialize messaging (needed for token registration) but do NOT call
+// onBackgroundMessage — its internal push listener conflicts with ours on iOS.
+firebase.messaging();
 
-// Firebase compat SDK background handler (Android/Chrome)
-messaging.onBackgroundMessage(function(payload) {
-  const notificationTitle = payload.notification?.title || 'Local 3494';
-  const notificationOptions = {
-    body: payload.notification?.body || '',
-    icon: '/static/icons/icon-192.png'
-  };
-  self.registration.showNotification(notificationTitle, notificationOptions);
+// Force new service worker to activate immediately without waiting
+self.addEventListener('install', function(event) {
+  self.skipWaiting();
 });
 
-// Direct push event listener — required for iOS PWA and more reliable across all platforms
+self.addEventListener('activate', function(event) {
+  event.waitUntil(self.clients.claim());
+});
+
+// Single, direct push event listener — most compatible across iOS and Android
 self.addEventListener('push', function(event) {
   let title = 'Local 3494';
   let body = '';
@@ -30,8 +31,9 @@ self.addEventListener('push', function(event) {
   if (event.data) {
     try {
       const data = event.data.json();
-      title = data.notification?.title || data.data?.title || title;
-      body = data.notification?.body || data.data?.body || body;
+      // FCM sends notification payload nested under 'notification'
+      title = (data.notification && data.notification.title) || (data.data && data.data.title) || title;
+      body  = (data.notification && data.notification.body)  || (data.data && data.data.body)  || body;
     } catch (e) {
       body = event.data.text();
     }

@@ -4038,6 +4038,13 @@ def send_push_notification(category, title, body, exclude_user_id=None):
                         title=title,
                         body=body,
                     ),
+                    webpush=fcm_messaging.WebpushConfig(
+                        notification=fcm_messaging.WebpushNotification(
+                            title=title,
+                            body=body,
+                            icon='/static/icons/icon-192.png',
+                        ),
+                    ),
                     token=token,
                 )
                 fcm_messaging.send(message)
