@@ -4231,11 +4231,10 @@ def family_get_app():
         preferences=preferences)
 
 
-# Run startup tasks at module level so they execute on WSGI import (PythonAnywhere)
-# NOTE: init_db() is NOT called here — it's slow (seeding) and only needed for fresh local dev.
-# All new tables/columns must be added to run_migrations() instead.
+# Run migrations at module level so they execute on WSGI import (PythonAnywhere).
+# NOTE: init_db() is NOT here — too slow (seeding). New tables go in run_migrations() instead.
+# NOTE: start_background_tasks() is NOT here — WSGI may import app multiple times, causing duplicate threads.
 run_migrations()
-start_background_tasks()
 
 if __name__ == '__main__':
     update_agent_status('union-website-skeleton', 'done', 'Union website skeleton built successfully')
