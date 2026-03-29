@@ -3745,9 +3745,21 @@ def new_member_discussion():
             (category_id, session['user_id'], title, body, datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
         )
         db.commit()
+
+        # Determine the right notification category from the slug
+        cat_row = db.execute("SELECT slug FROM discussion_categories WHERE id = ?", [category_id]).fetchone()
+        slug = cat_row['slug'] if cat_row else ''
+        if 'union' in slug:
+            notify_cat = 'member_discuss_union'
+        elif 'social' in slug or 'off-duty' in slug:
+            notify_cat = 'member_discuss_social'
+        elif 'question' in slug:
+            notify_cat = 'member_discuss_questions'
+        else:
+            notify_cat = 'member_discuss_general'
+
         db.close()
-        
-        send_push_notification('member_discuss_general', 'New Discussion', title)
+        send_push_notification(notify_cat, 'New Discussion', title)
         
         flash('Discussion posted!', 'success')
         return redirect(url_for('member_discussions'))
@@ -3923,6 +3935,34 @@ def run_migrations():
         # Table already exists, that's fine
         pass
     
+    # Add section column to discussion_categories if it doesn't exist
+    try:
+        db.execute("ALTER TABLE discussion_categories ADD COLUMN section TEXT DEFAULT 'family'")
+        db.commit()
+    except Exception:
+        pass  # Column already exists
+
+    # Seed member discussion categories if not already present
+    member_cats = db.execute(
+        "SELECT COUNT(*) FROM discussion_categories WHERE section='member'"
+    ).fetchone()[0]
+    if member_cats == 0:
+        member_categories = [
+            ('General', 'member-general', 'General member discussion', None, 10, 'member'),
+            ('Union Business', 'union-business', 'Union news, votes, and official topics', None, 11, 'member'),
+            ('Off-Duty & Social', 'off-duty-social', 'Social plans, hobbies, off-duty life', None, 12, 'member'),
+            ('Questions', 'member-questions', 'Questions for fellow members', None, 13, 'member'),
+        ]
+        for name, slug, desc, expiry, order, section in member_categories:
+            try:
+                db.execute(
+                    "INSERT INTO discussion_categories (name, slug, description, expiry_days, sort_order, section) VALUES (?, ?, ?, ?, ?, ?)",
+                    (name, slug, desc, expiry, order, section)
+                )
+            except Exception:
+                pass  # Slug conflict, skip
+        db.commit()
+
     db.close()
 
 
@@ -4160,10 +4200,13 @@ def family_get_app():
         preferences=preferences)
 
 
+# Run startup tasks at module level so they execute on WSGI import (PythonAnywhere)
+# All operations use IF NOT EXISTS / try-except so re-running is always safe
+init_db()
+run_migrations()
+start_background_tasks()
+
 if __name__ == '__main__':
-    init_db()
-    run_migrations()
-    start_background_tasks()
     update_agent_status('union-website-skeleton', 'done', 'Union website skeleton built successfully')
     print("🔥 Union Website starting on http://localhost:5002")
     app.run(host='0.0.0.0', port=5002, debug=False)
