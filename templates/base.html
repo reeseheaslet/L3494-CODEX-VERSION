@@ -318,6 +318,23 @@
       if ('Notification' in window && Notification.permission === 'default') {
         // Delay 3 seconds so it's not jarring on page load
         setTimeout(requestNotificationPermission, 3000);
+      } else if ('Notification' in window && Notification.permission === 'granted') {
+        // Permission already granted — silently refresh token in case SW update invalidated it
+        setTimeout(async function() {
+          try {
+            const swReg = await navigator.serviceWorker.ready;
+            const token = await messaging.getToken({ vapidKey: VAPID_KEY, serviceWorkerRegistration: swReg });
+            if (token) {
+              await fetch('/api/push/register', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json', 'X-CSRFToken': document.querySelector('meta[name=csrf-token]')?.content || ''},
+                body: JSON.stringify({ token })
+              });
+            }
+          } catch (err) {
+            console.log('Token refresh error:', err);
+          }
+        }, 2000);
       }
 
       messaging.onMessage(function(payload) {
