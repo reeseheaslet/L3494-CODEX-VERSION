@@ -2248,7 +2248,7 @@ def admin():
     
     # Get all events with signups
     all_events = db.execute("""
-        SELECT id, title, event_date, event_time, location, event_type, signup_enabled FROM events ORDER BY event_date DESC
+        SELECT id, title, event_date, event_time, location, description, event_type, signup_enabled, visibility FROM events ORDER BY event_date DESC
     """).fetchall()
     events_list = [dict(e) for e in all_events]
     
@@ -2540,6 +2540,43 @@ def admin_delete_event():
     db.close()
     
     flash('Event deleted successfully.', 'success')
+    return redirect('/admin?tab=events')
+
+@app.route('/admin/events/create', methods=['POST'])
+@require_role('board_member', 'admin', 'super_admin')
+def admin_create_event():
+    """Create a new event from admin panel"""
+    title = request.form.get('title', '').strip()
+    description = request.form.get('description', '').strip()
+    location = request.form.get('location', '').strip()
+    event_date = request.form.get('event_date', '').strip()
+    event_time = request.form.get('event_time', '').strip()
+    event_type = request.form.get('event_type', 'member').strip()
+    signup_enabled = 1 if request.form.get('signup_enabled') else 0
+    
+    visibility_targets = []
+    if request.form.get('visibility_public_homepage'):
+        visibility_targets.append('public_homepage')
+    if request.form.get('visibility_member_portal'):
+        visibility_targets.append('member_portal')
+    if request.form.get('visibility_family_section'):
+        visibility_targets.append('family_section')
+    visibility = ','.join(visibility_targets) if visibility_targets else 'member_portal'
+    
+    if not all([title, event_date, location]):
+        flash('Please fill in all required fields.', 'error')
+        return redirect('/admin?tab=events')
+    
+    db = get_db()
+    db.execute("""
+        INSERT INTO events (title, description, location, event_date, event_time, event_type, signup_enabled, visibility, created_by)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """, (title, description, location, event_date, event_time, event_type, signup_enabled, visibility, session.get('user_id')))
+    db.commit()
+    db.close()
+    
+    send_push_notification('events', 'New Event Posted', title)
+    flash('Event created successfully!', 'success')
     return redirect('/admin?tab=events')
 
 @app.route('/admin/bulletin/delete', methods=['POST'])
@@ -2948,15 +2985,25 @@ def members_events_create():
     event_type = request.form.get('event_type', 'member').strip()
     signup_enabled = 1 if request.form.get('signup_enabled') else 0
     
+    # Build visibility string
+    visibility_targets = []
+    if request.form.get('visibility_public_homepage'):
+        visibility_targets.append('public_homepage')
+    if request.form.get('visibility_member_portal'):
+        visibility_targets.append('member_portal')
+    if request.form.get('visibility_family_section'):
+        visibility_targets.append('family_section')
+    visibility = ','.join(visibility_targets) if visibility_targets else 'member_portal'
+    
     if not all([title, event_date, location]):
         flash('Please fill in all required fields.', 'error')
         return redirect(url_for('members_events'))
     
     db = get_db()
     db.execute("""
-        INSERT INTO events (title, description, location, event_date, event_time, event_type, signup_enabled, created_by)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    """, (title, description, location, event_date, event_time, event_type, signup_enabled, get_member_id()))
+        INSERT INTO events (title, description, location, event_date, event_time, event_type, signup_enabled, visibility, created_by)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """, (title, description, location, event_date, event_time, event_type, signup_enabled, visibility, get_member_id()))
     db.commit()
     db.close()
     

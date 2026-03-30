@@ -286,6 +286,11 @@
         <!-- TAB: Events Management -->
         <div id="events" class="tab-content hidden bg-white rounded-b-lg shadow-sm p-6 mb-6">
             <h2 class="font-heading font-bold text-xl text-navy mb-4">Events Management</h2>
+            <div class="flex justify-end mb-4">
+                <button onclick="openCreateModal()" class="bg-fire hover:bg-fire-dark text-white font-semibold px-4 py-2 rounded transition text-sm">
+                    ＋ Create Event
+                </button>
+            </div>
             
             {% if events %}
             <div class="space-y-4">
@@ -326,7 +331,7 @@
                         </div>
                         <div class="flex gap-2">
                             <!-- Edit Button -->
-                            <button class="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded text-sm font-semibold transition edit-event-btn" data-event-id="{{ event.id }}" data-event="{{ event|tojson }}">Edit</button>
+                            <button class="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded text-sm font-semibold transition edit-event-btn" data-event-id="{{ event.id }}" data-event='{{ event|tojson }}'>Edit</button>
                             
                             <!-- Delete Button -->
                             <form method="POST" action="/admin/events/delete" style="display: inline;" onsubmit="return confirm('Delete this event?');">
@@ -570,6 +575,70 @@
     </div>
 </div>
 
+<!-- Create Event Modal -->
+<div id="create-event-modal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-lg shadow-lg max-w-md w-full max-h-screen overflow-y-auto">
+        <div class="bg-navy px-6 py-4">
+            <h3 class="text-white font-heading font-bold">Create New Event</h3>
+        </div>
+        <form method="POST" action="/admin/events/create" class="p-6 space-y-4">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div>
+                <label class="block text-xs font-semibold text-gray-600 uppercase mb-2">Title *</label>
+                <input type="text" name="title" required class="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-fire/30">
+            </div>
+            <div>
+                <label class="block text-xs font-semibold text-gray-600 uppercase mb-2">Date *</label>
+                <input type="date" name="event_date" required class="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-fire/30">
+            </div>
+            <div>
+                <label class="block text-xs font-semibold text-gray-600 uppercase mb-2">Time</label>
+                <input type="time" name="event_time" class="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-fire/30">
+            </div>
+            <div>
+                <label class="block text-xs font-semibold text-gray-600 uppercase mb-2">Location *</label>
+                <input type="text" name="location" required class="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-fire/30">
+            </div>
+            <div>
+                <label class="block text-xs font-semibold text-gray-600 uppercase mb-2">Description</label>
+                <textarea name="description" rows="3" class="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-fire/30"></textarea>
+            </div>
+            <div>
+                <label class="block text-xs font-semibold text-gray-600 uppercase mb-2">Type</label>
+                <select name="event_type" class="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-fire/30">
+                    <option value="member">Members Only</option>
+                    <option value="public">Public</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-xs font-semibold text-gray-600 uppercase mb-2">Show On</label>
+                <div class="space-y-2">
+                    <label class="flex items-center gap-2">
+                        <input type="checkbox" name="visibility_public_homepage" class="w-4 h-4">
+                        <span class="text-sm text-gray-700">Public Homepage</span>
+                    </label>
+                    <label class="flex items-center gap-2">
+                        <input type="checkbox" name="visibility_member_portal" checked class="w-4 h-4">
+                        <span class="text-sm text-gray-700">Member Portal</span>
+                    </label>
+                    <label class="flex items-center gap-2">
+                        <input type="checkbox" name="visibility_family_section" class="w-4 h-4">
+                        <span class="text-sm text-gray-700">Family Section</span>
+                    </label>
+                </div>
+            </div>
+            <label class="flex items-center gap-2">
+                <input type="checkbox" name="signup_enabled" class="w-4 h-4">
+                <span class="text-sm text-gray-700">Enable sign-ups</span>
+            </label>
+            <div class="flex gap-2 pt-4">
+                <button type="submit" class="flex-1 px-4 py-2 bg-fire text-white rounded font-semibold hover:bg-fire-dark transition">Create Event</button>
+                <button type="button" onclick="closeCreateModal()" class="flex-1 px-4 py-2 bg-gray-200 text-gray-800 rounded font-semibold hover:bg-gray-300 transition">Cancel</button>
+            </div>
+        </form>
+    </div>
+</div>
+
 <script>
     // Tab switching
     document.querySelectorAll('.tab-btn').forEach(btn => {
@@ -682,5 +751,16 @@
         const targetBtn = document.querySelector('[data-tab="' + tabParam + '"]');
         if (targetBtn) targetBtn.click();
     }
+
+    // Create event modal functions
+    function openCreateModal() {
+        document.getElementById('create-event-modal').classList.remove('hidden');
+    }
+    function closeCreateModal() {
+        document.getElementById('create-event-modal').classList.add('hidden');
+    }
+    document.getElementById('create-event-modal').addEventListener('click', function(e) {
+        if (e.target === this) closeCreateModal();
+    });
 </script>
 {% endblock %}
