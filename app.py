@@ -67,12 +67,12 @@ def inject_next_meeting():
         return {'next_gm_meeting': None}
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 
-# Email configuration (fill in before going live)
-SMTP_HOST = os.environ.get('SMTP_HOST', 'smtp.mail.yahoo.com')
+# Email configuration — Gmail SMTP
+SMTP_HOST = os.environ.get('SMTP_HOST', 'smtp.gmail.com')
 SMTP_PORT = int(os.environ.get('SMTP_PORT', '587'))
-SMTP_USER = os.environ.get('SMTP_USER', 'reese_joseph14@yahoo.com')
-SMTP_PASSWORD = os.environ.get('SMTP_PASSWORD', 'syantnwvwvjpsara')
-SMTP_FROM = os.environ.get('SMTP_FROM', 'reese_joseph14@yahoo.com')
+SMTP_USER = os.environ.get('SMTP_USER', '')
+SMTP_PASSWORD = os.environ.get('SMTP_PASSWORD', '')
+SMTP_FROM = os.environ.get('SMTP_FROM', '')
 BASE_URL = os.environ.get('BASE_URL', 'https://local3494.pythonanywhere.com')
 
 AGENTS_STATUS_FILE = "/home/reese/.openclaw/workspace/agents_status.json"
@@ -103,19 +103,19 @@ app.jinja_env.globals.update(get_profile_photo=get_profile_photo)
 
 def send_email(to_email, subject, html_body):
     """
-    Send an email using SMTP or log to debug file if not configured.
-    
+    Send an email via Gmail SMTP, or log to debug file if not configured.
+
     Args:
         to_email: Recipient email address
         subject: Email subject
         html_body: HTML body of the email
-    
+
     Returns:
         True on success, False on failure (never raises)
     """
     try:
-        # If no SMTP credentials configured, log to debug file instead
         if not SMTP_USER:
+            # Dev fallback: log to file
             debug_log = '/tmp/union_email_debug.log'
             with open(debug_log, 'a') as f:
                 f.write(f"\n{'='*60}\n")
@@ -126,21 +126,21 @@ def send_email(to_email, subject, html_body):
                 f.write(html_body)
                 f.write(f"\n\n")
             return True
-        
-        # Send via SMTP
+
         msg = MIMEMultipart('alternative')
         msg['Subject'] = subject
         msg['From'] = SMTP_FROM
         msg['To'] = to_email
-        
         msg.attach(MIMEText(html_body, 'html'))
-        
+
         with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as server:
+            server.ehlo()
             server.starttls()
             server.login(SMTP_USER, SMTP_PASSWORD)
             server.send_message(msg)
-        
+
         return True
+
     except Exception as e:
         print(f"[ERROR] Failed to send email to {to_email}: {str(e)}")
         return False
