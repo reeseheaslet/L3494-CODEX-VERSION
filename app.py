@@ -1127,25 +1127,115 @@ def family_home():
 
 @app.route('/family/events')
 def family_events():
-    """Show events for family members (filtered by visibility)"""
+    """Show events for family members (both union-posted and community events)"""
     if not require_family_access():
         return redirect(url_for('login'))
     
     db = get_db()
     
-    # Get events visible in family section (LIKE for comma-separated values)
-    events = db.execute("""
+    # Union-posted events visible in family section
+    union_events = db.execute("""
         SELECT * FROM events 
         WHERE visibility LIKE '%family_section%' 
         ORDER BY event_date ASC
     """).fetchall()
     
+    # Community events created by family members or firefighters
+    community_events = db.execute("""
+        SELECT fce.*, 
+               (SELECT COUNT(*) FROM family_event_rsvps WHERE event_id = fce.id) as rsvp_count
+        FROM family_community_events fce
+        ORDER BY fce.event_date ASC
+    """).fetchall()
+    
+    # Get current user's RSVPs
+    user_id = session.get('user_id')
+    user_type = session.get('user_type', 'family')  # 'member' or 'family'
+    user_rsvps = set()
+    if user_id:
+        rsvps = db.execute(
+            "SELECT event_id FROM family_event_rsvps WHERE user_type = ? AND user_id = ?",
+            (user_type, user_id)
+        ).fetchall()
+        user_rsvps = {r['event_id'] for r in rsvps}
+    
     db.close()
     
     return render_template('family_events.html',
-        events=[dict(e) for e in events],
+        union_events=[dict(e) for e in union_events],
+        community_events=[dict(e) for e in community_events],
+        user_rsvps=user_rsvps,
         username=session.get('username', ''),
         role=session.get('role', 'member'))
+
+@app.route('/family/events/create', methods=['POST'])
+def family_event_create():
+    """Create a community event (family or member)"""
+    if not require_family_access():
+        return redirect(url_for('login'))
+    
+    title = request.form.get('title', '').strip()
+    description = request.form.get('description', '').strip()
+    event_date = request.form.get('event_date', '').strip()
+    event_time = request.form.get('event_time', '').strip()
+    location = request.form.get('location', '').strip()
+    category = request.form.get('category', 'social').strip()
+    
+    if not title or not event_date:
+        flash('Title and date are required.', 'error')
+        return redirect(url_for('family_events'))
+    
+    user_id = session.get('user_id')
+    username = session.get('username', 'Unknown')
+    user_type = session.get('user_type', 'family')
+    
+    db = get_db()
+    db.execute("""
+        INSERT INTO family_community_events 
+        (title, description, event_date, event_time, location, category, created_by_type, created_by_id, created_by_name)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """, (title, description, event_date, event_time or None, location or None, category, user_type, user_id, username))
+    db.commit()
+    
+    # Send push notification for new community event
+    send_push_notification('family_community_events', '📅 New Family Event', f"{username} created: {title}")
+    
+    db.close()
+    
+    flash('Event created!', 'success')
+    return redirect(url_for('family_events'))
+
+@app.route('/family/events/<int:event_id>/rsvp', methods=['POST'])
+def family_event_rsvp(event_id):
+    """Toggle RSVP for a community event"""
+    if not require_family_access():
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    user_id = session.get('user_id')
+    user_type = session.get('user_type', 'family')
+    username = session.get('username', 'Unknown')
+    
+    db = get_db()
+    existing = db.execute(
+        "SELECT id FROM family_event_rsvps WHERE event_id = ? AND user_type = ? AND user_id = ?",
+        (event_id, user_type, user_id)
+    ).fetchone()
+    
+    if existing:
+        db.execute("DELETE FROM family_event_rsvps WHERE id = ?", (existing['id'],))
+        action = 'removed'
+    else:
+        db.execute(
+            "INSERT INTO family_event_rsvps (event_id, user_type, user_id, user_name) VALUES (?, ?, ?, ?)",
+            (event_id, user_type, user_id, username)
+        )
+        action = 'added'
+    
+    db.commit()
+    count = db.execute("SELECT COUNT(*) as c FROM family_event_rsvps WHERE event_id = ?", (event_id,)).fetchone()['c']
+    db.close()
+    
+    return jsonify({'action': action, 'count': count})
 
 @app.route('/family/roster')
 def family_roster():
@@ -1185,7 +1275,46 @@ def family_roster():
         members=[dict(m) for m in members],
         shift_filter=shift_filter,
         username=session.get('username', ''),
-        role=session.get('role', 'member'))
+        role=session.get('role', 'member'),
+        current_user_id=session.get('user_id'),
+        linked_member_id=session.get('linked_member_id'))
+
+@app.route('/family/profile/update', methods=['POST'])
+def family_profile_update():
+    """Update a member or family member's profile from the family directory"""
+    if not require_family_access():
+        return jsonify({'success': False, 'error': 'Not logged in'}), 401
+    
+    member_id = request.form.get('member_id', type=int)
+    name = request.form.get('name', '').strip()
+    shift = request.form.get('shift', '').strip()
+    
+    if not member_id or not name:
+        return jsonify({'success': False, 'error': 'Missing required fields'}), 400
+    
+    # Permission check: can only edit self or linked member
+    user_id = session.get('user_id')
+    linked_id = session.get('linked_member_id')
+    if member_id != user_id and member_id != linked_id:
+        return jsonify({'success': False, 'error': 'Permission denied'}), 403
+    
+    # Validate shift
+    if shift and shift not in ('A', 'B', 'C'):
+        shift = None
+    
+    db = get_db()
+    db.execute(
+        "UPDATE members SET name = ?, shift = ? WHERE id = ?",
+        (name, shift or None, member_id)
+    )
+    db.commit()
+    db.close()
+    
+    # Update session username if editing own record
+    if member_id == user_id:
+        session['username'] = name
+    
+    return jsonify({'success': True, 'name': name, 'shift': shift})
 
 @app.route('/family/announcements')
 def family_announcements():
@@ -3233,6 +3362,54 @@ def members_chat_send():
     
     return redirect(url_for('members_chat'))
 
+# ========== MEMBER PROFILE ==========
+
+@app.route('/members/profile', methods=['GET', 'POST'])
+def member_profile():
+    """Member profile page — view and edit personal info"""
+    if not require_member_access():
+        return redirect(url_for('login'))
+    
+    db = get_db()
+    
+    if request.method == 'POST':
+        name = request.form.get('name', '').strip()
+        rank = request.form.get('rank', '').strip()
+        shift = request.form.get('shift', '').strip()
+        years_of_service = request.form.get('years_of_service', '').strip()
+        
+        if not name:
+            flash('Name cannot be empty.', 'error')
+            return redirect(url_for('member_profile'))
+        
+        try:
+            years_int = int(years_of_service) if years_of_service else None
+        except ValueError:
+            years_int = None
+        
+        db.execute(
+            "UPDATE members SET name = ?, rank = ?, shift = ?, years_of_service = ? WHERE id = ?",
+            (name, rank or None, shift or None, years_int, session['user_id'])
+        )
+        db.commit()
+        db.close()
+        
+        session['username'] = name
+        flash('Profile updated successfully!', 'success')
+        return redirect(url_for('member_profile'))
+    
+    member = db.execute(
+        "SELECT id, name, email, rank, shift, years_of_service, badge_number, profile_photo FROM members WHERE id = ?",
+        (session['user_id'],)
+    ).fetchone()
+    db.close()
+    
+    return render_template('member_profile.html',
+        member=dict(member) if member else {},
+        username=session.get('username', ''),
+        role=session.get('role', 'member')
+    )
+
 # ========== DISCUSSIONS BOARD ==========
 
 @app.route('/family/discussions')
@@ -3966,6 +4143,44 @@ def run_migrations():
     except Exception:
         pass
 
+    # Create family_community_events table if it doesn't exist
+    try:
+        db.execute("""
+            CREATE TABLE IF NOT EXISTS family_community_events (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                title TEXT NOT NULL,
+                description TEXT,
+                event_date TEXT NOT NULL,
+                event_time TEXT,
+                location TEXT,
+                category TEXT DEFAULT 'social',
+                created_by_type TEXT NOT NULL,
+                created_by_id INTEGER NOT NULL,
+                created_by_name TEXT NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        db.commit()
+    except Exception:
+        pass
+
+    # Create family_event_rsvps table if it doesn't exist
+    try:
+        db.execute("""
+            CREATE TABLE IF NOT EXISTS family_event_rsvps (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                event_id INTEGER NOT NULL,
+                user_type TEXT NOT NULL,
+                user_id INTEGER NOT NULL,
+                user_name TEXT NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(event_id, user_type, user_id)
+            )
+        """)
+        db.commit()
+    except Exception:
+        pass
+
     # Add section column to discussion_categories if it doesn't exist
     try:
         db.execute("ALTER TABLE discussion_categories ADD COLUMN section TEXT DEFAULT 'family'")
@@ -4099,7 +4314,7 @@ def register_push_token():
             default_categories = [
                 'events', 'meetings', 'member_chat',
                 'member_discuss_general', 'member_discuss_union', 'member_discuss_social', 'member_discuss_questions',
-                'family_events', 'family_chat', 'family_discuss', 'family_announcements'
+                'family_events', 'family_community_events', 'family_chat', 'family_discuss', 'family_announcements'
             ]
             for cat in default_categories:
                 exists = db.execute(
@@ -4207,6 +4422,7 @@ def member_get_app():
         'member_discuss_social': True,
         'member_discuss_questions': True,
         'family_events': True,
+        'family_community_events': True,
         'family_chat': True,
         'family_discuss': True,
         'family_announcements': True
@@ -4239,6 +4455,7 @@ def family_get_app():
     # Convert to dict with defaults
     preferences = {
         'family_events': True,
+        'family_community_events': True,
         'family_chat': True,
         'family_discuss': True,
         'family_announcements': True

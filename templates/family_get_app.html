@@ -13,6 +13,14 @@
 
 <section class="py-12 bg-gray-50">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+
+        <!-- Back Button -->
+        <div class="mb-4">
+            <a href="/family" class="inline-flex items-center gap-1 text-gray-500 hover:text-fire text-sm font-medium transition">
+                ← Back to Family Portal
+            </a>
+        </div>
+
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
 
             <!-- Section 1: Install Instructions -->
@@ -140,36 +148,45 @@
                         <!-- Family Notifications -->
                         <div class="border-t border-gray-200 pt-4">
                             <h3 class="font-heading font-bold text-navy text-sm uppercase tracking-wider mb-4">Family Notifications</h3>
-                            <div class="space-y-3">
-                                <label class="flex items-start gap-3 cursor-pointer group">
+                            <div class="space-y-4">
+                                <!-- Events -->
+                                <label class="flex items-start gap-3 cursor-pointer">
                                     <input type="checkbox" name="family_events" class="w-4 h-4 mt-1 text-fire bg-gray-100 border-gray-300 rounded focus:ring-fire focus:ring-2 cursor-pointer" {% if preferences.get('family_events', True) %}checked{% endif %}>
-                                    <div class="flex-1 group-hover:bg-gray-50 p-2 rounded -m-2">
-                                        <p class="font-semibold text-navy text-sm">📅 Family Events</p>
-                                        <p class="text-gray-500 text-xs">When a new family event is posted</p>
+                                    <div>
+                                        <div class="font-semibold text-navy text-sm">📅 Union Events</div>
+                                        <div class="text-gray-500 text-xs">Notify when a new union event is posted</div>
                                     </div>
                                 </label>
-
-                                <label class="flex items-start gap-3 cursor-pointer group">
-                                    <input type="checkbox" name="family_chat" class="w-4 h-4 mt-1 text-fire bg-gray-100 border-gray-300 rounded focus:ring-fire focus:ring-2 cursor-pointer" {% if preferences.get('family_chat', True) %}checked{% endif %}>
-                                    <div class="flex-1 group-hover:bg-gray-50 p-2 rounded -m-2">
-                                        <p class="font-semibold text-navy text-sm">💬 Family Chat</p>
-                                        <p class="text-gray-500 text-xs">New messages in the family chat</p>
+                                <!-- Community Events -->
+                                <label class="flex items-start gap-3 cursor-pointer">
+                                    <input type="checkbox" name="family_community_events" class="w-4 h-4 mt-1 text-fire bg-gray-100 border-gray-300 rounded focus:ring-fire focus:ring-2 cursor-pointer" {% if preferences.get('family_community_events', True) %}checked{% endif %}>
+                                    <div>
+                                        <div class="font-semibold text-navy text-sm">🎉 Community Events</div>
+                                        <div class="text-gray-500 text-xs">Notify when a family member creates an event (birthday, dinner, etc.)</div>
                                     </div>
                                 </label>
-
-                                <label class="flex items-start gap-3 cursor-pointer group">
-                                    <input type="checkbox" name="family_discuss" class="w-4 h-4 mt-1 text-fire bg-gray-100 border-gray-300 rounded focus:ring-fire focus:ring-2 cursor-pointer" {% if preferences.get('family_discuss', True) %}checked{% endif %}>
-                                    <div class="flex-1 group-hover:bg-gray-50 p-2 rounded -m-2">
-                                        <p class="font-semibold text-navy text-sm">💭 Family Discussions</p>
-                                        <p class="text-gray-500 text-xs">New posts in family discussions</p>
-                                    </div>
-                                </label>
-
-                                <label class="flex items-start gap-3 cursor-pointer group">
+                                <!-- Announcements -->
+                                <label class="flex items-start gap-3 cursor-pointer">
                                     <input type="checkbox" name="family_announcements" class="w-4 h-4 mt-1 text-fire bg-gray-100 border-gray-300 rounded focus:ring-fire focus:ring-2 cursor-pointer" {% if preferences.get('family_announcements', True) %}checked{% endif %}>
-                                    <div class="flex-1 group-hover:bg-gray-50 p-2 rounded -m-2">
-                                        <p class="font-semibold text-navy text-sm">📣 Family Announcements</p>
-                                        <p class="text-gray-500 text-xs">Births, hires, promotions, and celebrations</p>
+                                    <div>
+                                        <div class="font-semibold text-navy text-sm">📢 Announcements</div>
+                                        <div class="text-gray-500 text-xs">Births, promotions, and department news</div>
+                                    </div>
+                                </label>
+                                <!-- Discussions -->
+                                <label class="flex items-start gap-3 cursor-pointer">
+                                    <input type="checkbox" name="family_discuss" class="w-4 h-4 mt-1 text-fire bg-gray-100 border-gray-300 rounded focus:ring-fire focus:ring-2 cursor-pointer" {% if preferences.get('family_discuss', True) %}checked{% endif %}>
+                                    <div>
+                                        <div class="font-semibold text-navy text-sm">💭 Discussions</div>
+                                        <div class="text-gray-500 text-xs">New posts in the family discussion board</div>
+                                    </div>
+                                </label>
+                                <!-- Chat -->
+                                <label class="flex items-start gap-3 cursor-pointer">
+                                    <input type="checkbox" name="family_chat" class="w-4 h-4 mt-1 text-fire bg-gray-100 border-gray-300 rounded focus:ring-fire focus:ring-2 cursor-pointer" {% if preferences.get('family_chat', True) %}checked{% endif %}>
+                                    <div>
+                                        <div class="font-semibold text-navy text-sm">💬 Chat</div>
+                                        <div class="text-gray-500 text-xs">New messages in the family chat</div>
                                     </div>
                                 </label>
                             </div>
@@ -199,20 +216,13 @@
     document.getElementById('preferencesForm').addEventListener('submit', async function(e) {
         e.preventDefault();
         
-        const formData = new FormData(this);
-        const preferences = {
-            'events': false,
-            'meetings': false,
-            'member_chat': false,
-            'member_discuss_general': false,
-            'member_discuss_union': false,
-            'member_discuss_social': false,
-            'member_discuss_questions': false,
-            'family_events': formData.has('family_events'),
-            'family_chat': formData.has('family_chat'),
-            'family_discuss': formData.has('family_discuss'),
-            'family_announcements': formData.has('family_announcements')
-        };
+        // Dynamically read all checkboxes from the form
+        const formEl = document.getElementById('preferencesForm');
+        const checkboxes = formEl.querySelectorAll('input[type="checkbox"]');
+        const preferences = {};
+        checkboxes.forEach(cb => {
+            preferences[cb.name] = cb.checked;
+        });
 
         try {
             const response = await fetch('/api/push/preferences', {

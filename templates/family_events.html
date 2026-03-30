@@ -14,72 +14,275 @@
 <section class="py-12 bg-gray-50">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
-        <!-- Family Portal Navigation Tabs -->
-        <div class="bg-white border border-gray-200 rounded-lg mb-8 overflow-hidden">
-            <div class="flex flex-wrap border-b border-gray-200">
-                <a href="/family" class="px-6 py-3 font-semibold text-gray-600 hover:text-navy hover:bg-gray-50">
-                    🏠 Home
-                </a>
-                <a href="/family/events" class="px-6 py-3 font-semibold text-navy border-b-2 border-fire hover:bg-gray-50">
-                    📅 Events
-                </a>
-                <a href="/family/roster" class="px-6 py-3 font-semibold text-gray-600 hover:text-navy hover:bg-gray-50">
-                    👥 Roster
-                </a>
-                <a href="/family/announcements" class="px-6 py-3 font-semibold text-gray-600 hover:text-navy hover:bg-gray-50">
-                    📢 Announcements
-                </a>
-                <a href="/family/photos" class="px-6 py-3 font-semibold text-gray-600 hover:text-navy hover:bg-gray-50">
-                    📸 Photos
-                </a>
-                <a href="/family/chat" class="px-6 py-3 font-semibold text-gray-600 hover:text-navy hover:bg-gray-50">
-                    💬 Chat
-                </a>
-            </div>
+        <!-- Back Button -->
+        <div class="mb-4">
+            <a href="/family" class="inline-flex items-center gap-1 text-gray-500 hover:text-fire text-sm font-medium transition">
+                ← Back to Family Portal
+            </a>
         </div>
 
-        <!-- Events Grid -->
-        {% if events %}
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {% for event in events %}
-            <div class="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-md transition">
-                <div class="flex items-start justify-between mb-4">
-                    <div>
-                        <div class="text-fire font-semibold text-sm">{{ event.event_date }}</div>
-                        <h3 class="font-heading font-bold text-xl text-navy mt-1">{{ event.title }}</h3>
-                    </div>
-                </div>
+        <!-- Create Event Toggle Button -->
+        <div class="mb-8">
+            <button onclick="toggleCreateEventForm()" class="bg-green-600 hover:bg-green-700 text-white font-semibold px-6 py-2 rounded-lg transition text-sm">
+                ➕ Create Community Event
+            </button>
+        </div>
+
+        <!-- Create Event Form (Hidden by default) -->
+        <div id="create-event-form" class="hidden mb-8 bg-white border border-gray-200 rounded-lg p-8">
+            <h3 class="font-heading font-bold text-xl text-navy mb-6">Create a Community Event</h3>
+            <form method="POST" action="/family/events/create" class="space-y-4">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 
-                <div class="space-y-2 mb-4 text-sm text-gray-600">
+                <!-- Title -->
+                <div>
+                    <label class="block text-sm font-semibold text-navy mb-2">Event Title *</label>
+                    <input type="text" name="title" required placeholder="What's the event name?" class="w-full border border-gray-300 rounded px-4 py-2 text-sm focus:border-fire focus:outline-none focus:ring-1 focus:ring-fire">
+                </div>
+
+                <!-- Category -->
+                <div>
+                    <label class="block text-sm font-semibold text-navy mb-2">Category</label>
+                    <select name="category" class="w-full border border-gray-300 rounded px-4 py-2 text-sm focus:border-fire focus:outline-none focus:ring-1 focus:ring-fire">
+                        <option value="social">📌 Other</option>
+                        <option value="birthday">🎂 Birthday</option>
+                        <option value="holiday">🎄 Holiday</option>
+                        <option value="dinner">🍽️ Dinner/Date Night</option>
+                        <option value="hangout">🏖️ Hangout</option>
+                        <option value="celebration">🎉 Celebration</option>
+                        <option value="activity">🏃 Activity</option>
+                    </select>
+                </div>
+
+                <!-- Date -->
+                <div>
+                    <label class="block text-sm font-semibold text-navy mb-2">Date *</label>
+                    <input type="date" name="event_date" required class="w-full border border-gray-300 rounded px-4 py-2 text-sm focus:border-fire focus:outline-none focus:ring-1 focus:ring-fire">
+                </div>
+
+                <!-- Time -->
+                <div>
+                    <label class="block text-sm font-semibold text-navy mb-2">Time (Optional)</label>
+                    <input type="time" name="event_time" class="w-full border border-gray-300 rounded px-4 py-2 text-sm focus:border-fire focus:outline-none focus:ring-1 focus:ring-fire">
+                </div>
+
+                <!-- Location -->
+                <div>
+                    <label class="block text-sm font-semibold text-navy mb-2">Location (Optional)</label>
+                    <input type="text" name="location" placeholder="Where will it be?" class="w-full border border-gray-300 rounded px-4 py-2 text-sm focus:border-fire focus:outline-none focus:ring-1 focus:ring-fire">
+                </div>
+
+                <!-- Description -->
+                <div>
+                    <label class="block text-sm font-semibold text-navy mb-2">Description (Optional)</label>
+                    <textarea name="description" rows="3" placeholder="More details about the event..." class="w-full border border-gray-300 rounded px-4 py-2 text-sm focus:border-fire focus:outline-none focus:ring-1 focus:ring-fire"></textarea>
+                </div>
+
+                <!-- Submit & Cancel -->
+                <div class="flex gap-3 pt-4">
+                    <button type="submit" class="bg-fire hover:bg-fire-dark text-white font-semibold px-6 py-2 rounded transition text-sm">
+                        ✓ Create Event
+                    </button>
+                    <button type="button" onclick="toggleCreateEventForm()" class="bg-gray-300 hover:bg-gray-400 text-navy font-semibold px-6 py-2 rounded transition text-sm">
+                        ✕ Cancel
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Union Events Section -->
+        {% if union_events %}
+        <div class="mb-12">
+            <h2 class="font-heading font-bold text-2xl text-navy mb-6">📋 Union Events</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {% for event in union_events %}
+                <div class="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-md transition">
+                    <div class="flex items-start justify-between mb-4">
+                        <div>
+                            <div class="text-fire font-semibold text-sm">{{ event.event_date }}</div>
+                            <h3 class="font-heading font-bold text-xl text-navy mt-1">{{ event.title }}</h3>
+                        </div>
+                    </div>
+                    
+                    <div class="space-y-2 mb-4 text-sm text-gray-600">
+                        {% if event.event_time %}
+                        <div class="flex items-center gap-2">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                            <span>{{ event.event_time }}</span>
+                        </div>
+                        {% endif %}
+                        <div class="flex items-center gap-2">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/></svg>
+                            <span>{{ event.location }}</span>
+                        </div>
+                    </div>
+
+                    {% if event.description %}
+                    <p class="text-gray-700 text-sm line-clamp-2">{{ event.description }}</p>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Community Events Section -->
+        {% if community_events %}
+        <div>
+            <h2 class="font-heading font-bold text-2xl text-navy mb-6">👥 Community Events</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {% for event in community_events %}
+                <div class="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-md transition" data-event-id="{{ event.id }}">
+                    <!-- Event Header -->
+                    <div class="flex items-start justify-between mb-4">
+                        <div class="flex-1">
+                            <div class="text-sm text-gray-500 mb-1">
+                                {% set category_emoji = {
+                                    'birthday': '🎂',
+                                    'holiday': '🎄',
+                                    'dinner': '🍽️',
+                                    'hangout': '🏖️',
+                                    'celebration': '🎉',
+                                    'activity': '🏃',
+                                    'social': '📌'
+                                } %}
+                                <span class="inline-block text-lg">{{ category_emoji.get(event.category, '📌') }}</span>
+                                <span class="text-fire font-semibold">{{ event.event_date }}</span>
+                            </div>
+                            <h3 class="font-heading font-bold text-lg text-navy">{{ event.title }}</h3>
+                        </div>
+                        <!-- RSVP Count Badge -->
+                        <div class="bg-navy text-white rounded-full w-10 h-10 flex items-center justify-center text-sm font-bold flex-shrink-0 rsvp-count">
+                            {{ event.rsvp_count or 0 }}
+                        </div>
+                    </div>
+
+                    <!-- Event Details -->
                     {% if event.event_time %}
-                    <div class="flex items-center gap-2">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                        <span>{{ event.event_time }}</span>
+                    <div class="text-sm text-gray-600 flex items-center gap-1 mb-2">
+                        🕐 {{ event.event_time }}
                     </div>
                     {% endif %}
-                    <div class="flex items-center gap-2">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-                        <span>{{ event.location }}</span>
+                    {% if event.location %}
+                    <div class="text-sm text-gray-600 flex items-center gap-1 mb-3">
+                        📍 {{ event.location }}
                     </div>
-                </div>
+                    {% endif %}
 
-                {% if event.description %}
-                <p class="text-gray-700 text-sm mb-4">{{ event.description }}</p>
-                {% endif %}
+                    {% if event.description %}
+                    <p class="text-gray-700 text-sm line-clamp-2 mb-3">{{ event.description }}</p>
+                    {% endif %}
+
+                    <!-- Creator Info -->
+                    <div class="text-xs text-gray-500 mb-4 pb-4 border-t border-gray-100 pt-4">
+                        Created by <strong>{{ event.created_by_name }}</strong>
+                    </div>
+
+                    <!-- RSVP Button -->
+                    <button class="w-full rsvp-button py-2 px-4 rounded font-semibold transition text-sm" 
+                            onclick="toggleRsvp(this, {{ event.id }})">
+                        {% if event.id in user_rsvps %}
+                            👍 Going (Click to remove)
+                        {% else %}
+                            🎉 I'm Going
+                        {% endif %}
+                    </button>
+                </div>
+                {% endfor %}
             </div>
-            {% endfor %}
         </div>
-        {% else %}
+        {% endif %}
+
+        <!-- No Events Message -->
+        {% if not union_events and not community_events %}
         <div class="bg-white rounded-lg p-12 text-center">
             <svg class="w-16 h-16 text-gray-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
             <p class="text-gray-500 text-lg">No upcoming events at this time</p>
         </div>
         {% endif %}
 
-        <!-- Back to home -->
-        <div class="mt-10 text-center">
-            <a href="/family" class="text-gray-400 hover:text-fire text-sm font-medium transition">← Back to Family Portal</a>
-        </div>
     </div>
 </section>
+
+<script>
+// Toggle create event form visibility
+function toggleCreateEventForm() {
+    const form = document.getElementById('create-event-form');
+    form.classList.toggle('hidden');
+}
+
+// Category emoji mapping
+const categoryEmojis = {
+    'birthday': '🎂',
+    'holiday': '🎄',
+    'dinner': '🍽️',
+    'hangout': '🏖️',
+    'celebration': '🎉',
+    'activity': '🏃',
+    'social': '📌'
+};
+
+// Toggle RSVP
+function toggleRsvp(button, eventId) {
+    // Show loading state
+    button.disabled = true;
+    button.textContent = '...';
+
+    fetch(`/family/events/${eventId}/rsvp`, {
+        method: 'POST',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Network response was not ok');
+        }
+        return response.json();
+    })
+    .then(data => {
+        // Update button state
+        const container = button.closest('[data-event-id]');
+        const badge = container.querySelector('.rsvp-count');
+        badge.textContent = data.count;
+
+        if (data.action === 'added') {
+            button.classList.add('bg-fire', 'text-white', 'hover:bg-fire-dark');
+            button.classList.remove('bg-gray-200', 'text-navy', 'hover:bg-gray-300');
+            button.textContent = '👍 Going (Click to remove)';
+        } else {
+            button.classList.remove('bg-fire', 'text-white', 'hover:bg-fire-dark');
+            button.classList.add('bg-gray-200', 'text-navy', 'hover:bg-gray-300');
+            button.textContent = '🎉 I\'m Going';
+        }
+
+        button.disabled = false;
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Failed to update RSVP. Please try again.');
+        button.disabled = false;
+        location.reload();
+    });
+}
+
+// Initialize RSVP button styles on page load
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('[data-event-id]').forEach(container => {
+        const eventId = container.dataset.eventId;
+        const button = container.querySelector('.rsvp-button');
+        
+        // Check if this event is in user's RSVPs
+        const rsvpText = button.textContent.trim();
+        if (rsvpText.includes('Going') && !rsvpText.includes('I\'m')) {
+            // User is going
+            button.classList.add('bg-fire', 'text-white', 'hover:bg-fire-dark');
+        } else {
+            // User is not going
+            button.classList.add('bg-gray-200', 'text-navy', 'hover:bg-gray-300');
+        }
+    });
+});
+</script>
+
 {% endblock %}

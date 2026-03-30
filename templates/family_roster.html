@@ -14,34 +14,11 @@
 <section class="py-12 bg-gray-50">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
-        <!-- Family Portal Navigation Tabs -->
-        <div class="bg-white border border-gray-200 rounded-lg mb-8 overflow-hidden">
-            <div class="flex flex-wrap border-b border-gray-200">
-                <a href="/family" class="px-6 py-3 font-semibold text-gray-600 hover:text-navy hover:bg-gray-50">
-                    🏠 Home
-                </a>
-                <a href="/family/roster" class="px-6 py-3 font-semibold text-navy border-b-2 border-fire hover:bg-gray-50">
-                    👥 Directory
-                </a>
-                <a href="/family/events" class="px-6 py-3 font-semibold text-gray-600 hover:text-navy hover:bg-gray-50">
-                    📅 Events
-                </a>
-                <a href="/family/announcements" class="px-6 py-3 font-semibold text-gray-600 hover:text-navy hover:bg-gray-50">
-                    📢 Announcements
-                </a>
-                <a href="/family/discussions" class="px-6 py-3 font-semibold text-gray-600 hover:text-navy hover:bg-gray-50">
-                    💭 Discussions
-                </a>
-                <a href="/family/photos" class="px-6 py-3 font-semibold text-gray-600 hover:text-navy hover:bg-gray-50">
-                    📸 Photos
-                </a>
-                <a href="/family/photos/albums" class="px-6 py-3 font-semibold text-gray-600 hover:text-navy hover:bg-gray-50">
-                    🗂️ Albums
-                </a>
-                <a href="/family/store" class="px-6 py-3 font-semibold text-gray-600 hover:text-navy hover:bg-gray-50">
-                    🛍️ Store
-                </a>
-            </div>
+        <!-- Back Button -->
+        <div class="mb-4">
+            <a href="/family" class="inline-flex items-center gap-1 text-gray-500 hover:text-fire text-sm font-medium transition">
+                ← Back to Family Portal
+            </a>
         </div>
 
         <!-- Shift Filter Tabs -->
@@ -101,6 +78,14 @@
                                 {% endif %}
                             </div>
                             {% endif %}
+                            
+                            <!-- Edit Button -->
+                            {% if member.id == current_user_id or member.id == linked_member_id %}
+                            <button onclick="openEditModal({{ member.id }}, '{{ member.name }}', '{{ member.shift or '' }}')" 
+                                    class="mt-2 text-xs bg-navy/10 hover:bg-navy/20 text-navy px-3 py-1 rounded transition font-semibold">
+                                ✏️ Edit
+                            </button>
+                            {% endif %}
                         </div>
                     </div>
 
@@ -120,6 +105,12 @@
                                 <div class="font-semibold text-navy text-sm">{{ member.spouse_name }}</div>
                             </div>
                         </div>
+                        {% if member.spouse_id == current_user_id or member.spouse_id == linked_member_id %}
+                        <button onclick="openEditModal({{ member.spouse_id }}, '{{ member.spouse_name }}', '')" 
+                                class="mt-1 text-xs bg-fire/10 hover:bg-fire/20 text-fire px-3 py-1 rounded transition font-semibold">
+                            ✏️ Edit
+                        </button>
+                        {% endif %}
                     </div>
                     {% endif %}
                 </div>
@@ -138,11 +129,85 @@
             </p>
         </div>
         {% endif %}
-
-        <!-- Back to home -->
-        <div class="mt-10 text-center">
-            <a href="/family" class="text-gray-400 hover:text-fire text-sm font-medium transition">← Back to Family Portal</a>
-        </div>
     </div>
 </section>
+
+<!-- Edit Profile Modal -->
+<div id="editProfileModal" class="fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-xl shadow-xl max-w-sm w-full p-6">
+        <h3 class="font-heading font-bold text-navy text-lg mb-4">Edit Profile</h3>
+        <form id="editProfileForm">
+            <input type="hidden" id="editMemberId" name="member_id">
+            <div class="mb-4">
+                <label class="block text-sm font-semibold text-navy mb-1">Name</label>
+                <input type="text" id="editName" name="name" required
+                       class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-fire/30 focus:border-fire">
+            </div>
+            <div class="mb-6">
+                <label class="block text-sm font-semibold text-navy mb-1">Shift</label>
+                <select id="editShift" name="shift" 
+                        class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-fire/30 focus:border-fire">
+                    <option value="">— Not assigned —</option>
+                    <option value="A">A Shift</option>
+                    <option value="B">B Shift</option>
+                    <option value="C">C Shift</option>
+                </select>
+            </div>
+            <div class="flex gap-3">
+                <button type="submit" class="flex-1 bg-fire hover:bg-fire-dark text-white font-semibold py-2 rounded transition text-sm">
+                    Save Changes
+                </button>
+                <button type="button" onclick="closeEditModal()" class="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold py-2 rounded transition text-sm">
+                    Cancel
+                </button>
+            </div>
+        </form>
+        <p id="editError" class="text-red-600 text-sm mt-3 hidden"></p>
+    </div>
+</div>
+
+<script>
+function openEditModal(memberId, name, shift) {
+    document.getElementById('editMemberId').value = memberId;
+    document.getElementById('editName').value = name;
+    document.getElementById('editShift').value = shift || '';
+    document.getElementById('editError').classList.add('hidden');
+    document.getElementById('editProfileModal').classList.remove('hidden');
+}
+
+function closeEditModal() {
+    document.getElementById('editProfileModal').classList.add('hidden');
+}
+
+document.getElementById('editProfileForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const formData = new FormData(this);
+    // Add CSRF token
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
+    formData.append('csrf_token', csrfToken);
+    
+    try {
+        const response = await fetch('/family/profile/update', {
+            method: 'POST',
+            body: formData
+        });
+        const data = await response.json();
+        if (data.success) {
+            closeEditModal();
+            location.reload(); // Refresh to show updated data
+        } else {
+            document.getElementById('editError').textContent = data.error || 'Failed to save changes';
+            document.getElementById('editError').classList.remove('hidden');
+        }
+    } catch (err) {
+        document.getElementById('editError').textContent = 'Network error. Please try again.';
+        document.getElementById('editError').classList.remove('hidden');
+    }
+});
+
+// Close modal on backdrop click
+document.getElementById('editProfileModal').addEventListener('click', function(e) {
+    if (e.target === this) closeEditModal();
+});
+</script>
 {% endblock %}

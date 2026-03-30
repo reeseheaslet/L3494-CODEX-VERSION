@@ -178,6 +178,37 @@
     </div>
     {% endif %}
 
+    <!-- Persistent Portal Navigation -->
+    {% if session.get('user_id') and (request.path.startswith('/members') or request.path.startswith('/family')) and not request.path.startswith('/admin') %}
+    <div class="bg-white border-b border-gray-200 shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex flex-wrap">
+                {% if session.get('role') == 'family' %}
+                <!-- Family portal nav -->
+                <a href="/family" class="px-5 py-3 text-sm font-semibold transition border-b-2 {% if request.path == '/family' %}text-navy border-fire{% else %}text-gray-500 border-transparent hover:text-navy hover:border-gray-300{% endif %}">🏠 Home</a>
+                <a href="/family/roster" class="px-5 py-3 text-sm font-semibold transition border-b-2 {% if request.path.startswith('/family/roster') %}text-navy border-fire{% else %}text-gray-500 border-transparent hover:text-navy hover:border-gray-300{% endif %}">👥 Directory</a>
+                <a href="/family/events" class="px-5 py-3 text-sm font-semibold transition border-b-2 {% if request.path.startswith('/family/events') %}text-navy border-fire{% else %}text-gray-500 border-transparent hover:text-navy hover:border-gray-300{% endif %}">📅 Events</a>
+                <a href="/family/announcements" class="px-5 py-3 text-sm font-semibold transition border-b-2 {% if request.path.startswith('/family/announcements') %}text-navy border-fire{% else %}text-gray-500 border-transparent hover:text-navy hover:border-gray-300{% endif %}">📢 Announcements</a>
+                <a href="/family/discussions" class="px-5 py-3 text-sm font-semibold transition border-b-2 {% if request.path.startswith('/family/discussions') %}text-navy border-fire{% else %}text-gray-500 border-transparent hover:text-navy hover:border-gray-300{% endif %}">💭 Discussions</a>
+                <a href="/family/photos" class="px-5 py-3 text-sm font-semibold transition border-b-2 {% if request.path.startswith('/family/photos') and not request.path.startswith('/family/photos/albums') %}text-navy border-fire{% else %}text-gray-500 border-transparent hover:text-navy hover:border-gray-300{% endif %}">📸 Photos</a>
+                <a href="/family/photos/albums" class="px-5 py-3 text-sm font-semibold transition border-b-2 {% if request.path.startswith('/family/photos/albums') %}text-navy border-fire{% else %}text-gray-500 border-transparent hover:text-navy hover:border-gray-300{% endif %}">🗂️ Albums</a>
+                <a href="/family/store" class="px-5 py-3 text-sm font-semibold transition border-b-2 {% if request.path.startswith('/family/store') %}text-navy border-fire{% else %}text-gray-500 border-transparent hover:text-navy hover:border-gray-300{% endif %}">🛍️ Store</a>
+                <a href="/family/get-the-app" class="px-5 py-3 text-sm font-semibold transition border-b-2 {% if request.path.startswith('/family/get-the-app') %}text-navy border-fire{% else %}text-gray-500 border-transparent hover:text-navy hover:border-gray-300{% endif %}">📱 Get the App</a>
+                {% else %}
+                <!-- Member portal nav -->
+                <a href="/members" class="px-5 py-3 text-sm font-semibold transition border-b-2 {% if request.path == '/members' %}text-navy border-fire{% else %}text-gray-500 border-transparent hover:text-navy hover:border-gray-300{% endif %}">🏠 Home</a>
+                <a href="/members/events" class="px-5 py-3 text-sm font-semibold transition border-b-2 {% if request.path.startswith('/members/events') or request.path.startswith('/members/meetings') %}text-navy border-fire{% else %}text-gray-500 border-transparent hover:text-navy hover:border-gray-300{% endif %}">🎯 Events</a>
+                <a href="/members/store" class="px-5 py-3 text-sm font-semibold transition border-b-2 {% if request.path.startswith('/members/store') %}text-navy border-fire{% else %}text-gray-500 border-transparent hover:text-navy hover:border-gray-300{% endif %}">🛍️ Store</a>
+                <a href="/members/discussions" class="px-5 py-3 text-sm font-semibold transition border-b-2 {% if request.path.startswith('/members/discussions') %}text-navy border-fire{% else %}text-gray-500 border-transparent hover:text-navy hover:border-gray-300{% endif %}">💬 Discussions</a>
+                <a href="/members/chat" class="px-5 py-3 text-sm font-semibold transition border-b-2 {% if request.path.startswith('/members/chat') %}text-navy border-fire{% else %}text-gray-500 border-transparent hover:text-navy hover:border-gray-300{% endif %}">💬 Chat</a>
+                <a href="/members/profile" class="px-5 py-3 text-sm font-semibold transition border-b-2 {% if request.path.startswith('/members/profile') %}text-navy border-fire{% else %}text-gray-500 border-transparent hover:text-navy hover:border-gray-300{% endif %}">👤 Profile</a>
+                <a href="/members/get-the-app" class="px-5 py-3 text-sm font-semibold transition border-b-2 {% if request.path.startswith('/members/get-the-app') %}text-navy border-fire{% else %}text-gray-500 border-transparent hover:text-navy hover:border-gray-300{% endif %}">📱 Get the App</a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
     <!-- Page Content -->
     <main class="flex-1">
         {% block content %}{% endblock %}

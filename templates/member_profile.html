@@ -1,0 +1,186 @@
+{% extends "base.html" %}
+{% block title %}My Profile · Local 3494{% endblock %}
+
+{% block content %}
+
+<!-- Page Banner -->
+<section class="bg-navy text-white py-12">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <h1 class="font-heading font-bold text-3xl md:text-4xl text-white">My Profile</h1>
+        <p class="text-gray-400 mt-2">View and update your member information</p>
+    </div>
+</section>
+
+<!-- Divider bar -->
+<div class="h-1 bg-gradient-to-r from-fire via-red-400 to-fire"></div>
+
+<!-- Main Content -->
+<section class="py-12 bg-gray-50">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+
+        <!-- Back Button -->
+        <div class="mb-4">
+            <a href="/members" class="inline-flex items-center gap-1 text-gray-500 hover:text-fire text-sm font-medium transition">
+                ← Back to Member Portal
+            </a>
+        </div>
+
+        <!-- Profile Container -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+
+            <!-- Left Column: Profile Photo -->
+            <div>
+                <div class="bg-white border border-gray-200 rounded-lg p-6 text-center">
+                    <!-- Avatar -->
+                    <div class="w-32 h-32 rounded-full border-4 border-navy/20 mx-auto mb-4 flex items-center justify-center flex-shrink-0 text-4xl font-bold text-white overflow-hidden bg-gradient-to-br from-navy to-navy-dark">
+                        {% if member.profile_photo %}
+                            <img src="/static/images/profiles/{{ member.profile_photo }}" alt="{{ member.name }}" class="w-full h-full object-cover">
+                        {% else %}
+                            {{ member.name[0].upper() if member.name else '?' }}
+                        {% endif %}
+                    </div>
+
+                    <!-- Name -->
+                    <h2 class="font-heading font-bold text-xl text-navy mb-1">{{ member.name }}</h2>
+                    {% if member.rank %}
+                    <p class="text-fire font-semibold text-sm mb-4">{{ member.rank }}</p>
+                    {% endif %}
+
+                    <!-- Update Photo Button -->
+                    <button onclick="openProfilePhotoModal()" class="block w-full bg-navy hover:bg-navy-dark text-white font-semibold py-2 px-4 rounded transition text-sm mb-3">
+                        📷 Update Photo
+                    </button>
+
+                    <!-- Info Note -->
+                    <p class="text-xs text-gray-500 text-center">
+                        To update your profile photo, click the button above or your avatar in the top navigation bar.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Right Column: Edit Form -->
+            <div class="md:col-span-2">
+                <div class="bg-white border border-gray-200 rounded-lg p-8">
+                    <h3 class="font-heading font-bold text-2xl text-navy mb-6">Edit Profile</h3>
+
+                    <form method="POST" action="/members/profile" class="space-y-6">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                        <!-- Name -->
+                        <div>
+                            <label for="name" class="block text-sm font-semibold text-navy mb-2">
+                                Name *
+                            </label>
+                            <input 
+                                type="text" 
+                                id="name" 
+                                name="name" 
+                                value="{{ member.name or '' }}" 
+                                required 
+                                class="w-full border border-gray-300 rounded-lg px-4 py-2 text-sm focus:border-fire focus:outline-none focus:ring-2 focus:ring-fire/20"
+                                placeholder="Your full name"
+                            >
+                        </div>
+
+                        <!-- Email (readonly) -->
+                        <div>
+                            <label for="email" class="block text-sm font-semibold text-navy mb-2">
+                                Email
+                            </label>
+                            <input 
+                                type="email" 
+                                id="email" 
+                                value="{{ member.email or '' }}" 
+                                disabled 
+                                class="w-full border border-gray-300 bg-gray-50 rounded-lg px-4 py-2 text-sm text-gray-600"
+                            >
+                            <p class="text-xs text-gray-500 mt-1">Contact an admin to change your email address</p>
+                        </div>
+
+                        <!-- Rank -->
+                        <div>
+                            <label for="rank" class="block text-sm font-semibold text-navy mb-2">
+                                Rank
+                            </label>
+                            <select 
+                                id="rank" 
+                                name="rank" 
+                                class="w-full border border-gray-300 rounded-lg px-4 py-2 text-sm focus:border-fire focus:outline-none focus:ring-2 focus:ring-fire/20"
+                            >
+                                <option value="">— Select Rank —</option>
+                                <option value="Firefighter" {% if member.rank == 'Firefighter' %}selected{% endif %}>Firefighter</option>
+                                <option value="Engineer" {% if member.rank == 'Engineer' %}selected{% endif %}>Engineer</option>
+                                <option value="Captain" {% if member.rank == 'Captain' %}selected{% endif %}>Captain</option>
+                                <option value="Battalion Chief" {% if member.rank == 'Battalion Chief' %}selected{% endif %}>Battalion Chief</option>
+                                <option value="Division Chief" {% if member.rank == 'Division Chief' %}selected{% endif %}>Division Chief</option>
+                            </select>
+                        </div>
+
+                        <!-- Shift -->
+                        <div>
+                            <label for="shift" class="block text-sm font-semibold text-navy mb-2">
+                                Shift
+                            </label>
+                            <select 
+                                id="shift" 
+                                name="shift" 
+                                class="w-full border border-gray-300 rounded-lg px-4 py-2 text-sm focus:border-fire focus:outline-none focus:ring-2 focus:ring-fire/20"
+                            >
+                                <option value="">— Select Shift —</option>
+                                <option value="A Shift" {% if member.shift == 'A Shift' %}selected{% endif %}>A Shift</option>
+                                <option value="B Shift" {% if member.shift == 'B Shift' %}selected{% endif %}>B Shift</option>
+                                <option value="C Shift" {% if member.shift == 'C Shift' %}selected{% endif %}>C Shift</option>
+                            </select>
+                        </div>
+
+                        <!-- Years of Service -->
+                        <div>
+                            <label for="years_of_service" class="block text-sm font-semibold text-navy mb-2">
+                                Years of Service
+                            </label>
+                            <input 
+                                type="number" 
+                                id="years_of_service" 
+                                name="years_of_service" 
+                                value="{{ member.years_of_service or '' }}" 
+                                min="0" 
+                                max="60"
+                                class="w-full border border-gray-300 rounded-lg px-4 py-2 text-sm focus:border-fire focus:outline-none focus:ring-2 focus:ring-fire/20"
+                                placeholder="e.g., 10"
+                            >
+                        </div>
+
+                        <!-- Badge Number (readonly) -->
+                        <div>
+                            <label for="badge_number" class="block text-sm font-semibold text-navy mb-2">
+                                Badge Number
+                            </label>
+                            <input 
+                                type="text" 
+                                id="badge_number" 
+                                value="{{ member.badge_number or '' }}" 
+                                disabled 
+                                class="w-full border border-gray-300 bg-gray-50 rounded-lg px-4 py-2 text-sm text-gray-600"
+                            >
+                            <p class="text-xs text-gray-500 mt-1">Contact an admin to change your badge number</p>
+                        </div>
+
+                        <!-- Submit Button -->
+                        <div class="pt-4">
+                            <button 
+                                type="submit" 
+                                class="w-full bg-fire hover:bg-fire-dark text-white font-semibold py-3 px-6 rounded-lg transition text-sm"
+                            >
+                                💾 Save Changes
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+</section>
+
+{% endblock %}
