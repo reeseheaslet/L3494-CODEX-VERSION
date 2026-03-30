@@ -1,6 +1,7 @@
 import sqlite3
 import os
 import json
+from werkzeug.security import generate_password_hash
 
 DB_PATH = os.path.join(os.path.dirname(__file__), 'union.db')
 
@@ -284,7 +285,8 @@ def init_db():
             slug TEXT UNIQUE NOT NULL,
             description TEXT,
             expiry_days INTEGER DEFAULT NULL,
-            sort_order INTEGER DEFAULT 0
+            sort_order INTEGER DEFAULT 0,
+            section TEXT DEFAULT 'family'
         )
     """)
     
@@ -349,8 +351,8 @@ def init_db():
     if existing == 0:
         db.execute("""
             INSERT INTO members (name, email, password, role, status)
-            VALUES ('Reese Heaslet', 'reese@local3494.org', 'test1234', 'super_admin', 'active')
-        """)
+            VALUES ('Reese Heaslet', 'reese@local3494.org', ?, 'super_admin', 'active')
+        """, (generate_password_hash('test1234'),))
     else:
         # Upgrade reese@local3494.org to super_admin with active status
         db.execute("""
@@ -419,17 +421,17 @@ def init_db():
     cats_count = db.execute("SELECT COUNT(*) FROM discussion_categories").fetchone()[0]
     if cats_count == 0:
         categories = [
-            ('General Discussion', 'general', 'General conversation for families', None, 1),
-            ('Buy / Sell / Give Away', 'buy-sell', 'Items for sale, trade, or free to good home', 60, 2),
-            ('Baby / Kids Items', 'baby-kids', 'Baby gear, kids clothes, toys', 60, 3),
-            ('A Shift Families', 'a-shift', 'For families of A Shift firefighters', None, 4),
-            ('B Shift Families', 'b-shift', 'For families of B Shift firefighters', None, 5),
-            ('C Shift Families', 'c-shift', 'For families of C Shift firefighters', None, 6),
-            ('Recommendations & Resources', 'recommendations', 'Local recommendations, resources, tips', None, 7),
+            ('General Discussion', 'general', 'General conversation for families', None, 1, 'family'),
+            ('Buy / Sell / Give Away', 'buy-sell', 'Items for sale, trade, or free to good home', 60, 2, 'family'),
+            ('Baby / Kids Items', 'baby-kids', 'Baby gear, kids clothes, toys', 60, 3, 'family'),
+            ('A Shift Families', 'a-shift', 'For families of A Shift firefighters', None, 4, 'family'),
+            ('B Shift Families', 'b-shift', 'For families of B Shift firefighters', None, 5, 'family'),
+            ('C Shift Families', 'c-shift', 'For families of C Shift firefighters', None, 6, 'family'),
+            ('Recommendations & Resources', 'recommendations', 'Local recommendations, resources, tips', None, 7, 'family'),
         ]
-        for name, slug, desc, expiry, order in categories:
-            db.execute("INSERT INTO discussion_categories (name, slug, description, expiry_days, sort_order) VALUES (?, ?, ?, ?, ?)",
-                       (name, slug, desc, expiry, order))
+        for name, slug, desc, expiry, order, section in categories:
+            db.execute("INSERT INTO discussion_categories (name, slug, description, expiry_days, sort_order, section) VALUES (?, ?, ?, ?, ?, ?)",
+                       (name, slug, desc, expiry, order, section))
     
     # Seed default "General Photos" album if empty
     albums_count = db.execute("SELECT COUNT(*) FROM photo_albums").fetchone()[0]
@@ -529,5 +531,50 @@ def init_db():
         )
     """)
     
+    db.execute('''CREATE TABLE IF NOT EXISTS general_meetings (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        title TEXT NOT NULL,
+        meeting_date TEXT NOT NULL,
+        meeting_time TEXT,
+        location TEXT,
+        description TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )''')
+
+    db.execute('''CREATE TABLE IF NOT EXISTS family_community_events (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        title TEXT NOT NULL,
+        event_date TEXT NOT NULL,
+        event_time TEXT,
+        location TEXT,
+        description TEXT,
+        created_by INTEGER,
+        user_type TEXT DEFAULT 'family',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (created_by) REFERENCES members(id)
+    )''')
+
+    db.execute('''CREATE TABLE IF NOT EXISTS family_event_rsvps (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        event_id INTEGER NOT NULL,
+        user_id INTEGER NOT NULL,
+        user_type TEXT DEFAULT 'family',
+        rsvp_status TEXT DEFAULT 'going',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(event_id, user_type, user_id),
+        FOREIGN KEY (event_id) REFERENCES family_community_events(id),
+        FOREIGN KEY (user_id) REFERENCES members(id)
+    )''')
+
+    db.execute('''CREATE TABLE IF NOT EXISTS event_messages (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        event_id INTEGER NOT NULL,
+        author_id INTEGER NOT NULL,
+        content TEXT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (event_id) REFERENCES events(id),
+        FOREIGN KEY (author_id) REFERENCES members(id)
+    )''')
+
     db.commit()
     db.close()

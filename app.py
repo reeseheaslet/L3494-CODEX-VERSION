@@ -317,6 +317,8 @@ def login():
             session['role'] = user['role']
             session['member_role'] = user['role']
             session['linked_member_id'] = user['linked_member_id']
+            session['status'] = user['status']
+            session['user_type'] = 'family' if user['role'] == 'family' else 'member'
             flash('Welcome back!', 'success')
             # Redirect family members to family portal, others to member portal
             if user['role'] == 'family':
@@ -673,7 +675,7 @@ def shift_calendar():
     # Fetch public events from database
     db = get_db()
     events = db.execute(
-        "SELECT * FROM events WHERE event_type = 'public' ORDER BY event_date ASC"
+        "SELECT * FROM events WHERE visibility LIKE '%public_homepage%' ORDER BY event_date ASC"
     ).fetchall()
     db.close()
     
@@ -1140,7 +1142,7 @@ def family_home():
     from datetime import date
     today = date.today().isoformat()
     upcoming_events = db.execute(
-        "SELECT * FROM events WHERE event_type='public' AND event_date >= ? ORDER BY event_date ASC LIMIT 3",
+        "SELECT * FROM events WHERE visibility LIKE '%family_section%' AND event_date >= ? ORDER BY event_date ASC LIMIT 3",
         (today,)
     ).fetchall()
     
@@ -2142,22 +2144,22 @@ def upload_profile_photo():
     # Check if user is pending (not allowed to upload)
     if session.get('status') == 'pending':
         flash('Pending members cannot upload profile photos.', 'error')
-        return redirect(request.referrer or url_for('family'))
+        return redirect(request.referrer or url_for('family_home'))
     
     # Check if file is in request
     if 'photo' not in request.files:
         flash('No file selected.', 'error')
-        return redirect(request.referrer or url_for('family'))
+        return redirect(request.referrer or url_for('family_home'))
     
     file = request.files['photo']
     
     if file.filename == '':
         flash('No file selected.', 'error')
-        return redirect(request.referrer or url_for('family'))
+        return redirect(request.referrer or url_for('family_home'))
     
     if not allowed_file(file.filename):
         flash('Only JPG, PNG, and GIF files are allowed.', 'error')
-        return redirect(request.referrer or url_for('family'))
+        return redirect(request.referrer or url_for('family_home'))
     
     # Create upload folder if it doesn't exist
     os.makedirs(PROFILE_PHOTO_FOLDER, exist_ok=True)
@@ -2180,10 +2182,10 @@ def upload_profile_photo():
         db.close()
         
         flash('Profile photo updated successfully!', 'success')
-        return redirect(request.referrer or url_for('family'))
+        return redirect(request.referrer or url_for('family_home'))
     except Exception as e:
         flash('An error occurred while uploading the photo. Please try again.', 'error')
-        return redirect(request.referrer or url_for('family'))
+        return redirect(request.referrer or url_for('family_home'))
 
 @app.route('/family/chat')
 def family_chat():
@@ -2334,9 +2336,8 @@ def admin():
 # ========== ADMIN MESSAGE ROUTES ==========
 
 @app.route('/admin/messages/mark-viewed', methods=['POST'])
+@require_role('admin', 'super_admin')
 def admin_messages_mark_viewed():
-    if session.get('role') not in ('admin', 'super_admin'):
-        return '', 403
     db = get_db()
     db.execute("UPDATE contact_messages SET viewed_at = datetime('now') WHERE viewed_at IS NULL")
     db.commit()
@@ -2344,9 +2345,8 @@ def admin_messages_mark_viewed():
     return '', 204
 
 @app.route('/admin/messages/<int:msg_id>/status', methods=['POST'])
+@require_role('admin', 'super_admin')
 def admin_message_status(msg_id):
-    if session.get('role') not in ('admin', 'super_admin'):
-        return '', 403
     new_status = request.form.get('status')
     if new_status not in ('new', 'in_progress', 'closed'):
         return '', 400
@@ -2479,7 +2479,7 @@ def admin_delete_member():
     db = get_db()
     
     # Don't allow deleting yourself
-    if str(member_id) == str(session.get('member_id')):
+    if str(member_id) == str(session.get('user_id')):
         flash('You cannot delete your own account.', 'error')
         db.close()
         return redirect('/admin?tab=members')
@@ -2497,6 +2497,18 @@ def admin_delete_member():
     db.execute("UPDATE members SET linked_member_id = NULL WHERE linked_member_id = ?", (member_id,))
     # Delete any pending invites they sent
     db.execute("DELETE FROM family_invitations WHERE firefighter_id = ?", (member_id,))
+    # Cascade delete all related data
+    db.execute('DELETE FROM event_signups WHERE member_id = ?', (member_id,))
+    db.execute('DELETE FROM chat_messages WHERE member_id = ?', (member_id,))
+    db.execute('DELETE FROM family_chat WHERE member_id = ?', (member_id,))
+    db.execute('DELETE FROM discussion_posts WHERE author_id = ?', (member_id,))
+    db.execute('DELETE FROM discussion_comments WHERE author_id = ?', (member_id,))
+    db.execute('DELETE FROM discussion_reactions WHERE member_id = ?', (member_id,))
+    db.execute('DELETE FROM push_tokens WHERE user_id = ?', (member_id,))
+    db.execute('DELETE FROM notification_preferences WHERE user_id = ?', (member_id,))
+    db.execute('DELETE FROM family_photos WHERE uploader_id = ?', (member_id,))
+    db.execute('DELETE FROM member_photos WHERE uploader_id = ?', (member_id,))
+    db.execute('DELETE FROM photo_comments WHERE author_id = ?', (member_id,))
     # Delete the member
     db.execute("DELETE FROM members WHERE id = ?", (member_id,))
     db.commit()
@@ -2846,8 +2858,10 @@ def admin_delete_album():
 @app.route('/members/store')
 def members_store():
     """Member-only store page"""
-    if not require_login():
+    if not require_member_access():
         return redirect(url_for('login'))
+    if session.get('role') == 'family':
+        return redirect(url_for('family_home'))
     
     db = get_db()
     # Show all active items (both public and member type)
@@ -2873,8 +2887,10 @@ def members_store():
 @app.route('/members/store/order', methods=['POST'])
 def members_store_order():
     """Process member store order"""
-    if not require_login():
+    if not require_member_access():
         return redirect(url_for('login'))
+    if session.get('role') == 'family':
+        return redirect(url_for('family_home'))
     
     name = request.form.get('name', '').strip()
     email = request.form.get('email', '').strip()
@@ -3349,7 +3365,7 @@ def members_bulletin():
     from datetime import date
     today = date.today().isoformat()
     next_meeting = db.execute(
-        "SELECT * FROM events WHERE title LIKE '%meeting%' AND event_type='member' AND event_date >= ? ORDER BY event_date ASC LIMIT 1",
+        "SELECT * FROM general_meetings WHERE meeting_date >= ? ORDER BY meeting_date ASC LIMIT 1",
         (today,)
     ).fetchone()
     next_meeting_dict = dict(next_meeting) if next_meeting else None
@@ -3509,7 +3525,7 @@ def family_discussions():
     # Pending family cannot access discussions
     if session.get('status') == 'pending':
         flash('Pending members do not have access to discussions.', 'error')
-        return redirect(url_for('family'))
+        return redirect(url_for('family_home'))
     
     db = get_db()
     
@@ -3564,7 +3580,7 @@ def family_discussion_category(category_slug):
     
     if session.get('status') == 'pending':
         flash('Pending members do not have access to discussions.', 'error')
-        return redirect(url_for('family'))
+        return redirect(url_for('family_home'))
     
     db = get_db()
     
@@ -3624,7 +3640,7 @@ def new_discussion_post():
     
     if session.get('status') == 'pending':
         flash('Pending members cannot create discussion posts.', 'error')
-        return redirect(url_for('family'))
+        return redirect(url_for('family_home'))
     
     db = get_db()
     
@@ -3680,7 +3696,7 @@ def view_discussion_post(post_id):
     
     if session.get('status') == 'pending':
         flash('Pending members do not have access to discussions.', 'error')
-        return redirect(url_for('family'))
+        return redirect(url_for('family_home'))
     
     db = get_db()
     
@@ -3754,12 +3770,12 @@ def add_discussion_comment(post_id):
     
     if session.get('status') == 'pending':
         flash('Pending members cannot comment.', 'error')
-        return redirect(request.referrer or url_for('family'))
+        return redirect(request.referrer or url_for('family_home'))
     
     body = request.form.get('body', '').strip()
     if not body:
         flash('Comment body cannot be empty.', 'error')
-        return redirect(request.referrer or url_for('family'))
+        return redirect(request.referrer or url_for('family_home'))
     
     db = get_db()
     
@@ -4430,7 +4446,7 @@ def notify_mentions(body, sender_user_id, context_label):
     try:
         for username in set(mentions):  # deduplicate
             user = db.execute(
-                "SELECT id FROM members WHERE LOWER(username) = LOWER(?)", (username,)
+                "SELECT id FROM members WHERE LOWER(name) = LOWER(?)", (username,)
             ).fetchone()
             if user and user['id'] != sender_user_id:
                 send_push_to_user(
@@ -4529,7 +4545,8 @@ def push_preferences():
         categories = [
             'events', 'meetings', 'member_chat',
             'member_discuss_general', 'member_discuss_union', 'member_discuss_social', 'member_discuss_questions',
-            'family_events', 'family_chat', 'family_discuss', 'family_announcements'
+            'family_events', 'family_chat', 'family_discuss', 'family_announcements',
+            'family_community_events'
         ]
         
         try:

@@ -331,7 +331,7 @@
                         </div>
                         <div class="flex gap-2">
                             <!-- Edit Button -->
-                            <button class="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded text-sm font-semibold transition edit-event-btn" data-event-id="{{ event.id }}" data-event='{{ event|tojson }}'>Edit</button>
+                            <button class="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded text-sm font-semibold transition edit-event-btn" data-event-id="{{ event.id }}" data-event="{{ event|tojson|forceescape }}">Edit</button>
                             
                             <!-- Delete Button -->
                             <form method="POST" action="/admin/events/delete" style="display: inline;" onsubmit="return confirm('Delete this event?');">
