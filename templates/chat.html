@@ -32,9 +32,9 @@
                         <div class="flex-1">
                             <div class="flex items-baseline gap-2">
                                 <span class="text-sm font-semibold text-navy">{{ msg.member_name or 'Unknown' }}</span>
-                                <span class="text-xs text-gray-500">{{ msg.created_at }}</span>
+                                <span class="text-xs text-gray-500">{{ msg.created_at | friendly_time }}</span>
                             </div>
-                            <p class="text-sm text-gray-700 mt-1 break-words">{{ msg.message }}</p>
+                            <p class="text-sm text-gray-700 mt-1 break-words">{{ msg.message | highlight_mentions }}</p>
                         </div>
                     </div>
                     {% endfor %}

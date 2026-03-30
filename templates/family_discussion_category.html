@@ -48,7 +48,7 @@
                                 </div>
                                 <div>
                                     <div class="font-semibold text-navy">{{ post.author_name }}</div>
-                                    <div class="text-xs text-gray-500">{{ post.created_at[:16] }}</div>
+                                    <div class="text-xs text-gray-500">{{ post.created_at | friendly_time }}</div>
                                 </div>
                             </div>
                             <h3 class="font-heading font-bold text-lg text-navy mb-2">{{ post.title }}</h3>

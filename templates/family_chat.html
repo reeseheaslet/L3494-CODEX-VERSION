@@ -31,10 +31,10 @@
                     <div class="mb-4">
                         <div class="flex items-baseline gap-2 mb-1">
                             <span class="font-semibold text-navy text-sm">{{ message.display_name }}</span>
-                            <span class="text-gray-500 text-xs">{{ message.created_at }}</span>
+                            <span class="text-gray-500 text-xs">{{ message.created_at | friendly_time }}</span>
                         </div>
                         <div class="bg-white border border-gray-200 rounded-lg p-3 text-sm text-gray-700 max-w-2xl">
-                            {{ message.message }}
+                            {{ message.message | highlight_mentions }}
                         </div>
                     </div>
                     {% endfor %}

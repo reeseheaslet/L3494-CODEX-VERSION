@@ -12,7 +12,7 @@
             <span class="text-gray-500">•</span>
             <span>by {{ post.author_name or 'Anonymous' }}</span>
             <span class="text-gray-500">•</span>
-            <span>{{ post.created_at[:10] }}</span>
+            <span>{{ post.created_at | friendly_time }}</span>
         </div>
     </div>
 </section>
@@ -33,7 +33,7 @@
         
         <!-- Original Post -->
         <div class="bg-white border border-gray-200 rounded-lg shadow-sm p-6 mb-8 whitespace-pre-wrap text-gray-700">
-            {{ post.body }}
+            {{ post.body | highlight_mentions }}
         </div>
         
         <!-- Comments Section Heading -->
@@ -48,9 +48,9 @@
                 <div class="bg-gray-50 border-l-4 border-fire rounded-lg p-4">
                     <div class="flex items-center justify-between mb-2">
                         <span class="font-semibold text-gray-700">{{ comment.author_name or 'Anonymous' }}</span>
-                        <span class="text-gray-500 text-sm">{{ comment.created_at[:10] }}</span>
+                        <span class="text-gray-500 text-sm">{{ comment.created_at | friendly_time }}</span>
                     </div>
-                    <p class="text-gray-600 whitespace-pre-wrap">{{ comment.body }}</p>
+                    <p class="text-gray-600 whitespace-pre-wrap">{{ comment.body | highlight_mentions }}</p>
                 </div>
                 {% endfor %}
             </div>

@@ -1,0 +1,8 @@
+/* @mention highlighting */
+.mention-tag {
+    background-color: #e8eef5;
+    color: #1e3a5c;
+    font-weight: 600;
+    border-radius: 4px;
+    padding: 0 3px;
+}

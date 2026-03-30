@@ -40,7 +40,7 @@
                     <h1 class="font-heading font-bold text-2xl text-navy mb-2">{{ post.title }}</h1>
                     <div class="text-gray-600">
                         <span class="font-semibold">{{ post.author_name }}</span>
-                        <span class="text-gray-500">• {{ post.created_at[:16] }}</span>
+                        <span class="text-gray-500">• {{ post.created_at | friendly_time }}</span>
                     </div>
                     {% if post.expires_at %}
                     <div class="text-sm text-orange-600 mt-2">
@@ -72,7 +72,7 @@
 
             <!-- Post Body -->
             <div class="mb-6">
-                <p class="text-gray-800 whitespace-pre-wrap leading-relaxed">{{ post.body }}</p>
+                <p class="text-gray-800 whitespace-pre-wrap leading-relaxed">{{ post.body | highlight_mentions }}</p>
             </div>
 
             <!-- Reactions Bar -->
@@ -104,7 +104,7 @@
                         </div>
                         <div class="flex-1">
                             <div class="font-semibold text-navy">{{ comment.author_name }}</div>
-                            <div class="text-xs text-gray-500">{{ comment.created_at[:16] }}</div>
+                            <div class="text-xs text-gray-500">{{ comment.created_at | friendly_time }}</div>
                         </div>
                         {% if is_admin %}
                         <form method="POST" action="/family/discussions/comment/{{ comment.id }}/delete" class="inline" onsubmit="return confirm('Delete this comment?');">
@@ -114,7 +114,7 @@
                         {% endif %}
                     </div>
                     
-                    <p class="text-gray-800 mb-3 whitespace-pre-wrap">{{ comment.body }}</p>
+                    <p class="text-gray-800 mb-3 whitespace-pre-wrap">{{ comment.body | highlight_mentions }}</p>
                     
                     {% if comment.image_filename %}
                     <div class="mb-3">

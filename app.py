@@ -98,6 +98,34 @@ def get_profile_photo(member_id):
         return f'/static/images/profiles/{member["profile_photo"]}'
     return '/static/images/default-avatar.png'
 
+@app.template_filter('friendly_time')
+def friendly_time_filter(value):
+    """Format a datetime string like '2026-03-29 21:54:00' into 'Mar 29, 2026 · 9:54 PM'"""
+    if not value:
+        return ''
+    try:
+        from datetime import datetime
+        dt = datetime.strptime(str(value)[:16], '%Y-%m-%d %H:%M')
+        return dt.strftime('%b %-d, %Y · %-I:%M %p')
+    except Exception:
+        return str(value)[:16]
+
+import markupsafe
+
+@app.template_filter('highlight_mentions')
+def highlight_mentions_filter(value):
+    """Wrap @username in a styled span for visual highlighting."""
+    import re
+    if not value:
+        return value
+    escaped = markupsafe.escape(value)
+    highlighted = re.sub(
+        r'@(\w+)',
+        r'<span class="mention-tag">@\1</span>',
+        str(escaped)
+    )
+    return markupsafe.Markup(highlighted)
+
 # Register Jinja2 global helpers
 app.jinja_env.globals.update(get_profile_photo=get_profile_photo)
 
@@ -306,6 +334,17 @@ def forgot_password():
         db = get_db()
         user = db.execute("SELECT * FROM members WHERE LOWER(email)=?", (email,)).fetchone()
         if user:
+            # Prevent duplicate emails: skip if a valid token was already sent in the last 5 minutes
+            recent = db.execute("""
+                SELECT id FROM password_reset_tokens
+                WHERE member_id = ? AND used = 0
+                AND expires_at > datetime('now')
+                AND created_at > datetime('now', '-5 minutes')
+            """, (user['id'],)).fetchone()
+            if recent:
+                db.close()
+                flash('If that email is in our system, you\'ll receive a reset link shortly.', 'success')
+                return redirect(url_for('login'))
             token = secrets.token_urlsafe(32)
             expires_at = (datetime.now() + timedelta(hours=1)).strftime('%Y-%m-%d %H:%M:%S')
             db.execute("INSERT INTO password_reset_tokens (member_id, token, expires_at) VALUES (?, ?, ?)",
@@ -2206,6 +2245,7 @@ def family_chat_send():
         VALUES (?, ?)
     """, (get_member_id(), message))
     db.commit()
+    notify_mentions(message, get_member_id(), 'Family Chat')
     db.close()
     
     message_snippet = message[:100]
@@ -3402,6 +3442,7 @@ def members_chat_send():
         VALUES (?, ?)
     """, (get_member_id(), message))
     db.commit()
+    notify_mentions(message, get_member_id(), 'Members Chat')
     db.close()
     
     message_snippet = message[:100]
@@ -3750,6 +3791,14 @@ def add_discussion_comment(post_id):
         VALUES (?, ?, ?, ?)
     """, (post_id, get_member_id(), body, image_filename))
     db.commit()
+    notify_mentions(body, get_member_id(), 'Family Discussion')
+    
+    # Send notification to post author
+    post_row = db.execute("SELECT author_id, title FROM discussion_posts WHERE id = ?", (post_id,)).fetchone()
+    if post_row and post_row['author_id'] != get_member_id():
+        commenter = session.get('username', 'Someone')
+        send_push_to_user(post_row['author_id'], '💬 New Reply', f"{commenter} replied to your post: {post_row['title'][:50]}")
+    
     db.close()
     
     flash('Comment added!', 'success')
@@ -4040,6 +4089,14 @@ def add_member_discussion_comment(post_id):
         (post_id, session['user_id'], body, datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
     )
     db.commit()
+    notify_mentions(body, session['user_id'], 'Members Discussion')
+    
+    # Send notification to post author
+    post = db.execute("SELECT author_id, title FROM discussion_posts WHERE id = ?", (post_id,)).fetchone()
+    if post and post['author_id'] != session['user_id']:
+        commenter = session.get('username', 'Someone')
+        send_push_to_user(post['author_id'], '💬 New Reply', f"{commenter} replied to your post: {post['title'][:50]}")
+    
     db.close()
     return redirect(url_for('view_member_discussion', post_id=post_id))
 
@@ -4296,16 +4353,11 @@ def send_push_notification(category, title, body, exclude_user_id=None):
         for token in tokens:
             try:
                 message = fcm_messaging.Message(
-                    notification=fcm_messaging.Notification(
-                        title=title,
-                        body=body,
-                    ),
                     webpush=fcm_messaging.WebpushConfig(
-                        notification=fcm_messaging.WebpushNotification(
-                            title=title,
-                            body=body,
-                            icon='/static/icons/icon-192.png',
-                        ),
+                        data={
+                            'title': title,
+                            'body': body,
+                        }
                     ),
                     token=token,
                 )
@@ -4326,6 +4378,68 @@ def send_push_notification(category, title, body, exclude_user_id=None):
     except Exception as e:
         print(f"[PUSH] Error in send_push_notification: {e}")
     
+    finally:
+        db.close()
+
+
+def send_push_to_user(user_id, title, body):
+    """Send push notification to a specific user by user_id."""
+    if not _firebase_initialized:
+        print(f"[PUSH STUB] Would send to user {user_id}: {title}: {body}")
+        return
+    db = get_db()
+    try:
+        tokens = [row['token'] for row in db.execute(
+            "SELECT token FROM push_tokens WHERE user_id = ?", (user_id,)
+        ).fetchall()]
+        if not tokens:
+            return
+        invalid_tokens = []
+        for token in tokens:
+            try:
+                message = fcm_messaging.Message(
+                    webpush=fcm_messaging.WebpushConfig(
+                        data={
+                            'title': title,
+                            'body': body,
+                        }
+                    ),
+                    token=token,
+                )
+                fcm_messaging.send(message)
+            except Exception as e:
+                if 'INVALID_ARGUMENT' in str(e) or 'NOT_FOUND' in str(e):
+                    invalid_tokens.append(token)
+        if invalid_tokens:
+            for t in invalid_tokens:
+                db.execute("DELETE FROM push_tokens WHERE token = ?", (t,))
+            db.commit()
+    except Exception as e:
+        print(f"[PUSH ERROR] send_push_to_user: {e}")
+    finally:
+        db.close()
+
+
+def notify_mentions(body, sender_user_id, context_label):
+    """Parse @username mentions from body and send targeted push notifications."""
+    import re
+    mentions = re.findall(r'@(\w+)', body)
+    if not mentions:
+        return
+    db = get_db()
+    try:
+        for username in set(mentions):  # deduplicate
+            user = db.execute(
+                "SELECT id FROM members WHERE LOWER(username) = LOWER(?)", (username,)
+            ).fetchone()
+            if user and user['id'] != sender_user_id:
+                send_push_to_user(
+                    user['id'],
+                    '🔔 You were mentioned',
+                    f"Someone mentioned you in {context_label}"
+                )
+    except Exception as e:
+        print(f"[PUSH ERROR] notify_mentions: {e}")
     finally:
         db.close()
 
@@ -4352,6 +4466,12 @@ def register_push_token():
         ).fetchone()
         
         if not existing:
+            # Delete old tokens from the same FCM instance (same device/browser)
+            instance_id = token.split(':')[0] if ':' in token else token[:20]
+            db.execute(
+                "DELETE FROM push_tokens WHERE user_id = ? AND token LIKE ?",
+                (session['user_id'], instance_id + '%')
+            )
             # Insert new token
             db.execute(
                 "INSERT INTO push_tokens (user_id, token) VALUES (?, ?)",

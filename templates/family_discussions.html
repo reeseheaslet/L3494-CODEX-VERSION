@@ -70,7 +70,7 @@
                                     {{ post.category_name }}
                                 </a>
                             </div>
-                            <div class="text-xs text-gray-500 mt-1">{{ post.created_at[:10] }} • {{ post.comment_count }} comment{% if post.comment_count != 1 %}s{% endif %}</div>
+                            <div class="text-xs text-gray-500 mt-1">{{ post.created_at | friendly_time }} • {{ post.comment_count }} comment{% if post.comment_count != 1 %}s{% endif %}</div>
                         </div>
                     </div>
                 </div>
