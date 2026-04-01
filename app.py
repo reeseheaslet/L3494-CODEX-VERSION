@@ -443,10 +443,10 @@ def register():
             """, (name, email, generate_password_hash(password), 'member', 'pending'))
             db.commit()
             
-            # Notify all admins of new registration
+            # Notify all super_admins of new registration
             try:
                 admins = db.execute(
-                    "SELECT email, name FROM members WHERE role IN ('admin', 'super_admin') AND status = 'active'"
+                    "SELECT email, name FROM members WHERE role = 'super_admin' AND status = 'active'"
                 ).fetchall()
                 for admin in admins:
                     admin_html = f"""
@@ -1559,6 +1559,32 @@ def family_photos_upload():
             VALUES (?, ?, ?, ?, 'pending')
         """, (get_member_id(), filename, caption if caption else None, album_id))
         db.commit()
+        
+        # Send admin notification email about pending photo
+        try:
+            uploader_name = session.get('username', 'A family member')
+            admin_html = f"""
+            <html>
+            <body style="font-family: Arial, sans-serif; color: #333; line-height: 1.6;">
+                <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+                    <h2 style="color: #B91C1C;">New Photo Upload Pending Approval</h2>
+                    <p>Hello Admin,</p>
+                    <p><strong>{uploader_name}</strong> has uploaded a photo to the family portal that needs your approval.</p>
+                    <p style="margin-top: 20px;">
+                        <a href="{BASE_URL}/admin?tab=photos" style="display: inline-block; background-color: #B91C1C; color: white; padding: 12px 30px; text-decoration: none; border-radius: 4px; font-weight: bold;">
+                            Review in Admin Panel
+                        </a>
+                    </p>
+                    <p>—<br>Local 3494 Admin System</p>
+                </div>
+            </body>
+            </html>
+            """
+            send_email('reese_joseph14@yahoo.com', 'New Photo Upload Pending Approval', admin_html)
+        except Exception as e:
+            # Don't block the upload if email fails
+            print(f"[WARNING] Failed to send admin notification for photo upload: {str(e)}")
+        
         db.close()
         
         flash('Photo submitted! It will appear after admin approval.', 'success')
@@ -1613,6 +1639,32 @@ def request_new_album():
         VALUES (?, ?, ?, 'pending')
     """, (name, description if description else None, get_member_id()))
     db.commit()
+    
+    # Send admin notification email about pending album request
+    try:
+        requester_name = session.get('username', 'A family member')
+        admin_html = f"""
+        <html>
+        <body style="font-family: Arial, sans-serif; color: #333; line-height: 1.6;">
+            <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+                <h2 style="color: #B91C1C;">New Album Request Pending Approval</h2>
+                <p>Hello Admin,</p>
+                <p><strong>{requester_name}</strong> has requested a new photo album titled "<strong>{name}</strong>" that needs your approval.</p>
+                <p style="margin-top: 20px;">
+                    <a href="{BASE_URL}/admin?tab=album" style="display: inline-block; background-color: #B91C1C; color: white; padding: 12px 30px; text-decoration: none; border-radius: 4px; font-weight: bold;">
+                        Review in Admin Panel
+                    </a>
+                </p>
+                <p>—<br>Local 3494 Admin System</p>
+            </div>
+        </body>
+        </html>
+        """
+        send_email('reese_joseph14@yahoo.com', 'New Album Request Pending Approval', admin_html)
+    except Exception as e:
+        # Don't block the request if email fails
+        print(f"[WARNING] Failed to send admin notification for album request: {str(e)}")
+    
     db.close()
     
     flash('Album request submitted for admin approval.', 'success')
@@ -1836,6 +1888,32 @@ def member_photos_upload():
             VALUES (?, ?, ?, ?, 'pending')
         """, (get_member_id(), filename, caption if caption else None, album_id))
         db.commit()
+        
+        # Send admin notification email about pending photo
+        try:
+            uploader_name = session.get('username', 'A member')
+            admin_html = f"""
+            <html>
+            <body style="font-family: Arial, sans-serif; color: #333; line-height: 1.6;">
+                <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+                    <h2 style="color: #B91C1C;">New Photo Upload Pending Approval</h2>
+                    <p>Hello Admin,</p>
+                    <p><strong>{uploader_name}</strong> has uploaded a photo to the member portal that needs your approval.</p>
+                    <p style="margin-top: 20px;">
+                        <a href="{BASE_URL}/admin/member-photos/queue" style="display: inline-block; background-color: #B91C1C; color: white; padding: 12px 30px; text-decoration: none; border-radius: 4px; font-weight: bold;">
+                            Review in Admin Panel
+                        </a>
+                    </p>
+                    <p>—<br>Local 3494 Admin System</p>
+                </div>
+            </body>
+            </html>
+            """
+            send_email('reese_joseph14@yahoo.com', 'New Photo Upload Pending Approval', admin_html)
+        except Exception as e:
+            # Don't block the upload if email fails
+            print(f"[WARNING] Failed to send admin notification for member photo upload: {str(e)}")
+        
         db.close()
         
         flash('Photo submitted! It will appear after admin approval.', 'success')
@@ -1962,6 +2040,32 @@ def member_request_new_album():
         VALUES (?, ?, ?, 'pending')
     """, (name, description if description else None, get_member_id()))
     db.commit()
+    
+    # Send admin notification email about pending album request
+    try:
+        requester_name = session.get('username', 'A member')
+        admin_html = f"""
+        <html>
+        <body style="font-family: Arial, sans-serif; color: #333; line-height: 1.6;">
+            <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+                <h2 style="color: #B91C1C;">New Album Request Pending Approval</h2>
+                <p>Hello Admin,</p>
+                <p><strong>{requester_name}</strong> has requested a new photo album titled "<strong>{name}</strong>" that needs your approval.</p>
+                <p style="margin-top: 20px;">
+                    <a href="{BASE_URL}/admin/member-photos/albums" style="display: inline-block; background-color: #B91C1C; color: white; padding: 12px 30px; text-decoration: none; border-radius: 4px; font-weight: bold;">
+                        Review in Admin Panel
+                    </a>
+                </p>
+                <p>—<br>Local 3494 Admin System</p>
+            </div>
+        </body>
+        </html>
+        """
+        send_email('reese_joseph14@yahoo.com', 'New Album Request Pending Approval', admin_html)
+    except Exception as e:
+        # Don't block the request if email fails
+        print(f"[WARNING] Failed to send admin notification for member album request: {str(e)}")
+    
     db.close()
     
     flash('Album request submitted for admin approval.', 'success')
