@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}Peer Support · Local 3494{% endblock %}
+
+{% block content %}
+<section class="bg-navy py-12">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="text-fire font-heading font-semibold text-xs uppercase tracking-widest mb-2">Family Portal</div>
+        <h1 class="font-heading font-bold text-3xl text-white">Peer Support</h1>
+        <p class="text-gray-400 mt-1">Resources and support for our firefighting family</p>
+    </div>
+</section>
+<div class="h-1 bg-gradient-to-r from-fire via-red-400 to-fire"></div>
+
+<section class="py-12 bg-gray-50">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+
+        <div class="grid grid-cols-1 gap-6">
+
+            <!-- CorePsych Link -->
+            <a href="https://corepsychcorp.com/yolo/" target="_blank" rel="noopener noreferrer"
+               class="bg-white border border-gray-200 hover:border-fire hover:shadow-md rounded-lg p-6 transition group flex items-start gap-5">
+                <div class="w-12 h-12 bg-fire/10 rounded-lg flex items-center justify-center flex-shrink-0 group-hover:bg-fire/20 transition">
+                    <svg class="w-6 h-6 text-fire" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>
+                    </svg>
+                </div>
+                <div>
+                    <h3 class="font-heading font-bold text-navy text-lg mb-1 group-hover:text-fire transition">Peer Support Clinicians</h3>
+                    <p class="text-gray-500 text-sm mb-2">corepsychcorp.com/yolo</p>
+                    <p class="text-gray-600 text-sm">Professional mental health support for first responders and their families in Yolo County.</p>
+                    <span class="inline-flex items-center gap-1 text-fire text-sm font-semibold mt-3">
+                        Visit Site
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+                    </span>
+                </div>
+            </a>
+
+        </div>
+
+        <div class="mt-8">
+            <a href="/family" class="text-gray-400 hover:text-fire text-sm font-medium transition">← Back to Family Portal</a>
+        </div>
+
+    </div>
+</section>
+{% endblock %}

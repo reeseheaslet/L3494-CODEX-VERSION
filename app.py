@@ -684,6 +684,13 @@ def shift_calendar():
     
     return render_template('shift_calendar.html', events=events_list) if os.path.exists(os.path.join(app.template_folder, 'shift_calendar.html')) else render_template('members.html')
 
+@app.route('/family/peer-support')
+def family_peer_support():
+    """Peer support resources for family members"""
+    if not require_family_access():
+        return redirect(url_for('login'))
+    return render_template('family_peer_support.html')
+
 # ========== PART B: Family Member Management ==========
 @app.route('/members/family')
 def members_family():
