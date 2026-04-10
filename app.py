@@ -3625,6 +3625,79 @@ def member_profile():
         role=session.get('role', 'member')
     )
 
+# ========== MEMBER DOCUMENTS ==========
+
+@app.route('/members/documents')
+def member_documents():
+    """View member documents - members only"""
+    if not require_member_access():
+        return redirect(url_for('login'))
+    
+    db = get_db()
+    documents = db.execute("""
+        SELECT id, title, description, url, added_by, created_at
+        FROM member_documents
+        ORDER BY created_at DESC
+    """).fetchall()
+    db.close()
+    
+    return render_template('member_documents.html',
+        documents=[dict(d) for d in documents],
+        username=session.get('username', ''),
+        role=session.get('role', 'member')
+    )
+
+@app.route('/members/documents/add', methods=['POST'])
+def add_document():
+    """Add a new document - admin+ only"""
+    if not require_member_access():
+        return redirect(url_for('login'))
+    
+    if session.get('role') not in ('admin', 'super_admin'):
+        flash('Only admins can add documents.', 'error')
+        return redirect(url_for('member_documents'))
+    
+    title = request.form.get('title', '').strip()
+    description = request.form.get('description', '').strip()
+    url = request.form.get('url', '').strip()
+    
+    if not title:
+        flash('Title is required.', 'error')
+        return redirect(url_for('member_documents'))
+    
+    if not url:
+        flash('URL is required.', 'error')
+        return redirect(url_for('member_documents'))
+    
+    db = get_db()
+    db.execute("""
+        INSERT INTO member_documents (title, description, url, added_by)
+        VALUES (?, ?, ?, ?)
+    """, (title, description if description else None, url, session['user_id']))
+    db.commit()
+    db.close()
+    
+    flash('Document added.', 'success')
+    return redirect(url_for('member_documents'))
+
+@app.route('/members/documents/<int:doc_id>/delete', methods=['POST'])
+def delete_document(doc_id):
+    """Delete a document - admin+ only"""
+    if not require_member_access():
+        return redirect(url_for('login'))
+    
+    if session.get('role') not in ('admin', 'super_admin'):
+        flash('Only admins can delete documents.', 'error')
+        return redirect(url_for('member_documents'))
+    
+    db = get_db()
+    db.execute("DELETE FROM member_documents WHERE id = ?", (doc_id,))
+    db.commit()
+    db.close()
+    
+    flash('Document removed.', 'success')
+    return redirect(url_for('member_documents'))
+
 # ========== DISCUSSIONS BOARD ==========
 
 @app.route('/family/discussions')
@@ -4439,6 +4512,34 @@ def run_migrations():
             except Exception:
                 pass  # Slug conflict, skip
         db.commit()
+
+    # Create member_documents table if it doesn't exist
+    try:
+        db.execute("""
+            CREATE TABLE IF NOT EXISTS member_documents (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                title TEXT NOT NULL,
+                description TEXT,
+                url TEXT NOT NULL,
+                added_by INTEGER,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        db.commit()
+    except Exception:
+        pass
+
+    # Seed initial document if table is empty
+    try:
+        doc_count = db.execute("SELECT COUNT(*) FROM member_documents").fetchone()[0]
+        if doc_count == 0:
+            db.execute("""
+                INSERT INTO member_documents (title, description, url, added_by)
+                VALUES (?, ?, ?, ?)
+            """, ('Josh Reese Shift Coverage', 'Shift coverage tracking spreadsheet', 'https://docs.google.com/spreadsheets/d/1YIQnBuG7POQXiBgp2B831KpRV9rREZFzCz8HXS9AB_k/edit?usp=drivesdk', None))
+            db.commit()
+    except Exception:
+        pass
 
     db.close()
 

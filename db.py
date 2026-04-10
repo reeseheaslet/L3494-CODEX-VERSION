@@ -576,5 +576,25 @@ def init_db():
         FOREIGN KEY (author_id) REFERENCES members(id)
     )''')
 
+    # Create member_documents table
+    db.execute("""
+        CREATE TABLE IF NOT EXISTS member_documents (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            title TEXT NOT NULL,
+            description TEXT,
+            url TEXT NOT NULL,
+            added_by INTEGER,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+
+    # Seed initial document if table is empty
+    doc_count = db.execute("SELECT COUNT(*) FROM member_documents").fetchone()[0]
+    if doc_count == 0:
+        db.execute("""
+            INSERT INTO member_documents (title, description, url, added_by)
+            VALUES (?, ?, ?, ?)
+        """, ('Josh Reese Shift Coverage', 'Shift coverage tracking spreadsheet', 'https://docs.google.com/spreadsheets/d/1YIQnBuG7POQXiBgp2B831KpRV9rREZFzCz8HXS9AB_k/edit?usp=drivesdk', None))
+
     db.commit()
     db.close()

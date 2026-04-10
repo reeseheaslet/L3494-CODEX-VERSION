@@ -203,14 +203,13 @@
             </a>
 
             <!-- Documents -->
-            <div class="bg-white border border-gray-200 rounded-lg p-6 relative">
-                <div class="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center mb-4">
-                    <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+            <a href="/members/documents" class="bg-white border border-gray-200 hover:border-fire hover:shadow-md rounded-lg p-6 transition group">
+                <div class="w-10 h-10 bg-fire/10 rounded-lg flex items-center justify-center mb-4 group-hover:bg-fire/20 transition">
+                    <svg class="w-5 h-5 text-fire" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
                 </div>
                 <h3 class="font-heading font-bold text-navy mb-1">Documents</h3>
-                <p class="text-gray-500 text-sm mb-3">Contracts, policies &amp; resources</p>
-                <span class="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded font-semibold">Coming Soon</span>
-            </div>
+                <p class="text-gray-500 text-sm">Union documents, forms, and resources</p>
+            </a>
 
             {% if role in ['admin', 'super_admin'] %}
             <!-- Admin Panel -->
