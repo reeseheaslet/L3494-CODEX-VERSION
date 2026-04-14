@@ -4652,6 +4652,7 @@ def send_push_notification(category, title, body, exclude_user_id=None):
                         data={
                             'title': title,
                             'body': body,
+                            'url': url,
                         }
                     ),
                     token=token,
@@ -4697,6 +4698,7 @@ def send_push_to_user(user_id, title, body):
                         data={
                             'title': title,
                             'body': body,
+                            'url': '/members/discussions',
                         }
                     ),
                     token=token,
