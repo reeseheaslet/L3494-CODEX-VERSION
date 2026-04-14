@@ -4552,6 +4552,24 @@ def run_migrations():
     except Exception:
         pass
 
+    # Create notifications table if it doesn't exist
+    try:
+        db.execute("""
+            CREATE TABLE IF NOT EXISTS notifications (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                title TEXT NOT NULL,
+                body TEXT NOT NULL,
+                category TEXT NOT NULL,
+                url TEXT,
+                is_read INTEGER DEFAULT 0,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        db.commit()
+    except Exception:
+        pass
+
     db.close()
 
 
@@ -4582,7 +4600,7 @@ def send_push_notification(category, title, body, exclude_user_id=None):
         if category in MEMBER_ONLY_CATEGORIES:
             # Exclude family users from member-only categories
             query = """
-                SELECT pt.token FROM push_tokens pt
+                SELECT pt.token, pt.user_id FROM push_tokens pt
                 JOIN notification_preferences np ON pt.user_id = np.user_id
                 JOIN members m ON pt.user_id = m.id
                 WHERE np.category = ? AND np.enabled = 1
@@ -4590,7 +4608,7 @@ def send_push_notification(category, title, body, exclude_user_id=None):
             """
         else:
             query = """
-                SELECT pt.token FROM push_tokens pt
+                SELECT pt.token, pt.user_id FROM push_tokens pt
                 JOIN notification_preferences np ON pt.user_id = np.user_id
                 WHERE np.category = ? AND np.enabled = 1
             """
@@ -4600,10 +4618,30 @@ def send_push_notification(category, title, body, exclude_user_id=None):
             query += " AND pt.user_id != ?"
             params.append(exclude_user_id)
         
-        tokens = [row['token'] for row in db.execute(query, params).fetchall()]
+        rows = db.execute(query, params).fetchall()
+        tokens = [row['token'] for row in rows]
         
         if not tokens:
             return
+        
+        # Save notifications to DB before sending FCM
+        CATEGORY_URLS = {
+            'events': '/members/events',
+            'meetings': '/members/events',
+            'member_chat': '/members/chat',
+            'member_discuss_general': '/members/discussions',
+            'member_discuss_union': '/members/discussions',
+            'member_discuss_social': '/members/discussions',
+            'member_discuss_questions': '/members/discussions',
+            'family_events': '/family/events',
+            'family_community_events': '/family/events',
+            'family_chat': '/family/chat',
+            'family_discuss': '/family/discussions',
+            'family_announcements': '/family/announcements',
+        }
+        url = CATEGORY_URLS.get(category)
+        for row in rows:
+            save_notification(row['user_id'], title, body, category, url)
         
         # Send to each token individually (handle invalid tokens)
         invalid_tokens = []
@@ -4664,6 +4702,8 @@ def send_push_to_user(user_id, title, body):
                     token=token,
                 )
                 fcm_messaging.send(message)
+                # Save notification to DB after successful send
+                save_notification(user_id, title, body, 'direct', '/members/discussions')
             except Exception as e:
                 if 'INVALID_ARGUMENT' in str(e) or 'NOT_FOUND' in str(e):
                     invalid_tokens.append(token)
@@ -4675,6 +4715,20 @@ def send_push_to_user(user_id, title, body):
         print(f"[PUSH ERROR] send_push_to_user: {e}")
     finally:
         db.close()
+
+
+def save_notification(user_id, title, body, category, url=None):
+    """Save a notification to the DB for display in the bell dropdown."""
+    try:
+        db = get_db()
+        db.execute(
+            "INSERT INTO notifications (user_id, title, body, category, url) VALUES (?, ?, ?, ?, ?)",
+            (user_id, title, body, category, url)
+        )
+        db.commit()
+        db.close()
+    except Exception as e:
+        print(f"[NOTIF] Error saving notification: {e}")
 
 
 def notify_mentions(body, sender_user_id, context_label):
@@ -4772,6 +4826,40 @@ def register_push_token():
     except Exception as e:
         print(f"[ERROR] Failed to register push token: {str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/notifications')
+def get_notifications():
+    """Get last 5 notifications + unread count for current user."""
+    if 'user_id' not in session:
+        return jsonify({'success': False}), 401
+    db = get_db()
+    notifs = db.execute(
+        "SELECT id, title, body, category, url, is_read, created_at FROM notifications WHERE user_id = ? ORDER BY created_at DESC LIMIT 5",
+        (session['user_id'],)
+    ).fetchall()
+    unread = db.execute(
+        "SELECT COUNT(*) as cnt FROM notifications WHERE user_id = ? AND is_read = 0",
+        (session['user_id'],)
+    ).fetchone()['cnt']
+    db.close()
+    return jsonify({
+        'success': True,
+        'notifications': [dict(n) for n in notifs],
+        'unread_count': unread
+    })
+
+
+@app.route('/api/notifications/mark-read', methods=['POST'])
+def mark_notifications_read():
+    """Mark all notifications as read for current user."""
+    if 'user_id' not in session:
+        return jsonify({'success': False}), 401
+    db = get_db()
+    db.execute("UPDATE notifications SET is_read = 1 WHERE user_id = ?", (session['user_id'],))
+    db.commit()
+    db.close()
+    return jsonify({'success': True})
 
 
 @app.route('/api/push/preferences', methods=['GET', 'POST'])

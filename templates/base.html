@@ -77,6 +77,24 @@
                     {% if session.get('user_id') %}
                     <!-- User Profile / Portal -->
                     <div class="ml-3 flex items-center gap-2">
+                        <!-- User Notification Bell -->
+                        <div class="relative" id="notif-bell-wrapper">
+                            <button id="notif-bell-btn" class="relative flex items-center justify-center w-8 h-8 text-gray-300 hover:text-white transition" title="Notifications" aria-label="Notifications">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+                                </svg>
+                                <span id="notif-badge" class="hidden absolute -top-1 -right-1 bg-fire text-white text-xs font-bold rounded-full w-4 h-4 flex items-center justify-center leading-none"></span>
+                            </button>
+                            <div id="notif-dropdown" class="hidden absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-xl border border-gray-200 z-50">
+                                <div class="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
+                                    <span class="font-semibold text-gray-800 text-sm">Notifications</span>
+                                    <button id="notif-mark-read" class="text-xs text-navy hover:underline">Mark all read</button>
+                                </div>
+                                <div id="notif-list" class="divide-y divide-gray-100 max-h-72 overflow-y-auto">
+                                    <div class="px-4 py-3 text-sm text-gray-500 text-center">Loading...</div>
+                                </div>
+                            </div>
+                        </div>
                         {% if session.get('role') in ('admin', 'super_admin') %}
                         <a href="/admin?tab=messages" id="nav-bell" class="relative flex items-center justify-center w-8 h-8 text-gray-300 hover:text-white transition" title="Contact Messages">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
@@ -106,6 +124,27 @@
                     </a>
                     {% endif %}
                 </div>
+
+                <!-- Mobile User Notification Bell -->
+                {% if session.get('user_id') %}
+                <div class="relative md:hidden" id="notif-bell-wrapper-mobile">
+                    <button id="notif-bell-btn-mobile" class="relative flex items-center justify-center w-8 h-8 text-gray-300 hover:text-white transition" title="Notifications">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+                        </svg>
+                        <span id="notif-badge-mobile" class="hidden absolute -top-1 -right-1 bg-fire text-white text-xs font-bold rounded-full w-4 h-4 flex items-center justify-center leading-none"></span>
+                    </button>
+                    <div id="notif-dropdown-mobile" class="hidden absolute right-0 mt-2 w-72 bg-white rounded-lg shadow-xl border border-gray-200 z-50">
+                        <div class="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
+                            <span class="font-semibold text-gray-800 text-sm">Notifications</span>
+                            <button id="notif-mark-read-mobile" class="text-xs text-navy hover:underline">Mark all read</button>
+                        </div>
+                        <div id="notif-list-mobile" class="divide-y divide-gray-100 max-h-64 overflow-y-auto">
+                            <div class="px-4 py-3 text-sm text-gray-500 text-center">Loading...</div>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
 
                 <!-- Mobile Admin Bell -->
                 {% if session.get('user_id') and session.get('role') in ('admin', 'super_admin') %}
@@ -390,5 +429,99 @@
     {% endif %}
 
     {% block scripts %}{% endblock %}
+
+    <script>
+    // ===== Notification Bell =====
+    (function() {
+        function initBell(btnId, dropdownId, badgeId, listId, markReadId, wrapperId) {
+            const btn = document.getElementById(btnId);
+            const dropdown = document.getElementById(dropdownId);
+            const badge = document.getElementById(badgeId);
+            const list = document.getElementById(listId);
+            const markReadBtn = document.getElementById(markReadId);
+            const wrapper = document.getElementById(wrapperId);
+            if (!btn) return;
+
+            function timeAgo(dateStr) {
+                const now = new Date();
+                const then = new Date(dateStr + ' UTC');
+                const diff = Math.floor((now - then) / 1000);
+                if (diff < 60) return 'just now';
+                if (diff < 3600) return Math.floor(diff / 60) + 'm ago';
+                if (diff < 86400) return Math.floor(diff / 3600) + 'h ago';
+                return Math.floor(diff / 86400) + 'd ago';
+            }
+
+            function renderNotifications(data) {
+                if (data.unread_count > 0) {
+                    badge.textContent = data.unread_count > 9 ? '9+' : data.unread_count;
+                    badge.classList.remove('hidden');
+                } else {
+                    badge.classList.add('hidden');
+                }
+                if (data.notifications.length === 0) {
+                    list.innerHTML = '<div class="px-4 py-4 text-sm text-gray-400 text-center">No notifications yet</div>';
+                    return;
+                }
+                list.innerHTML = data.notifications.map(n => `
+                    <a href="${n.url || '#'}" class="block px-4 py-3 hover:bg-gray-50 transition ${n.is_read ? '' : 'bg-blue-50'}">
+                        <div class="flex items-start gap-2">
+                            ${!n.is_read ? '<span class="mt-1.5 w-2 h-2 rounded-full bg-fire flex-shrink-0"></span>' : '<span class="mt-1.5 w-2 h-2 flex-shrink-0"></span>'}
+                            <div class="flex-1 min-w-0">
+                                <div class="text-sm font-semibold text-gray-800 truncate">${n.title}</div>
+                                <div class="text-xs text-gray-500 truncate">${n.body}</div>
+                                <div class="text-xs text-gray-400 mt-0.5">${timeAgo(n.created_at)}</div>
+                            </div>
+                        </div>
+                    </a>
+                `).join('');
+            }
+
+            function loadNotifications() {
+                fetch('/api/notifications')
+                    .then(r => r.json())
+                    .then(data => { if (data.success) renderNotifications(data); });
+            }
+
+            btn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                const isOpen = !dropdown.classList.contains('hidden');
+                dropdown.classList.toggle('hidden');
+                if (!isOpen) loadNotifications();
+            });
+
+            document.addEventListener('click', function(e) {
+                if (wrapper && !wrapper.contains(e.target)) {
+                    dropdown.classList.add('hidden');
+                }
+            });
+
+            markReadBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                const csrf = document.querySelector('meta[name="csrf-token"]');
+                fetch('/api/notifications/mark-read', {
+                    method: 'POST',
+                    headers: csrf ? {'X-CSRFToken': csrf.content} : {}
+                }).then(() => {
+                    badge.classList.add('hidden');
+                    loadNotifications();
+                });
+            });
+
+            // Silent badge count on page load
+            fetch('/api/notifications')
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success && data.unread_count > 0) {
+                        badge.textContent = data.unread_count > 9 ? '9+' : data.unread_count;
+                        badge.classList.remove('hidden');
+                    }
+                });
+        }
+
+        initBell('notif-bell-btn', 'notif-dropdown', 'notif-badge', 'notif-list', 'notif-mark-read', 'notif-bell-wrapper');
+        initBell('notif-bell-btn-mobile', 'notif-dropdown-mobile', 'notif-badge-mobile', 'notif-list-mobile', 'notif-mark-read-mobile', 'notif-bell-wrapper-mobile');
+    })();
+    </script>
 </body>
 </html>
