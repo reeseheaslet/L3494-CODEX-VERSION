@@ -125,27 +125,6 @@
                     {% endif %}
                 </div>
 
-                <!-- Mobile User Notification Bell -->
-                {% if session.get('user_id') %}
-                <div class="relative md:hidden" id="notif-bell-wrapper-mobile">
-                    <button id="notif-bell-btn-mobile" class="relative flex items-center justify-center w-8 h-8 text-gray-300 hover:text-white transition" title="Notifications">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
-                        </svg>
-                        <span id="notif-badge-mobile" class="hidden absolute -top-1 -right-1 bg-fire text-white text-xs font-bold rounded-full w-4 h-4 flex items-center justify-center leading-none"></span>
-                    </button>
-                    <div id="notif-dropdown-mobile" class="hidden absolute right-0 mt-2 w-72 bg-white rounded-lg shadow-xl border border-gray-200 z-50">
-                        <div class="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
-                            <span class="font-semibold text-gray-800 text-sm">Notifications</span>
-                            <button id="notif-mark-read-mobile" class="text-xs text-navy hover:underline">Mark all read</button>
-                        </div>
-                        <div id="notif-list-mobile" class="divide-y divide-gray-100 max-h-64 overflow-y-auto">
-                            <div class="px-4 py-3 text-sm text-gray-500 text-center">Loading...</div>
-                        </div>
-                    </div>
-                </div>
-                {% endif %}
-
                 <!-- Mobile Admin Bell -->
                 {% if session.get('user_id') and session.get('role') in ('admin', 'super_admin') %}
                 <a href="/admin?tab=messages" id="mobile-nav-bell" class="md:hidden relative flex items-center justify-center w-8 h-8 text-gray-300 hover:text-white transition" title="Contact Messages">
@@ -520,7 +499,6 @@
         }
 
         initBell('notif-bell-btn', 'notif-dropdown', 'notif-badge', 'notif-list', 'notif-mark-read', 'notif-bell-wrapper');
-        initBell('notif-bell-btn-mobile', 'notif-dropdown-mobile', 'notif-badge-mobile', 'notif-list-mobile', 'notif-mark-read-mobile', 'notif-bell-wrapper-mobile');
     })();
     </script>
 </body>
