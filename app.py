@@ -100,12 +100,14 @@ def get_profile_photo(member_id):
 
 @app.template_filter('friendly_time')
 def friendly_time_filter(value):
-    """Format a datetime string like '2026-03-29 21:54:00' into 'Mar 29, 2026 · 9:54 PM'"""
+    """Format a UTC datetime string into PST/PDT (America/Los_Angeles) time."""
     if not value:
         return ''
     try:
-        from datetime import datetime
+        from datetime import datetime, timezone
+        from zoneinfo import ZoneInfo
         dt = datetime.strptime(str(value)[:16], '%Y-%m-%d %H:%M')
+        dt = dt.replace(tzinfo=timezone.utc).astimezone(ZoneInfo('America/Los_Angeles'))
         return dt.strftime('%b %-d, %Y · %-I:%M %p')
     except Exception:
         return str(value)[:16]
