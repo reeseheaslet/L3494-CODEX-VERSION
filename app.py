@@ -448,7 +448,7 @@ def register():
             # Notify all super_admins of new registration
             try:
                 admins = db.execute(
-                    "SELECT email, name FROM members WHERE role = 'super_admin' AND status = 'active'"
+                    "SELECT id, email, name FROM members WHERE role = 'super_admin' AND status = 'active'"
                 ).fetchall()
                 for admin in admins:
                     admin_html = f"""
@@ -472,6 +472,13 @@ def register():
                         admin['email'],
                         f"New member registration: {name}",
                         admin_html
+                    )
+                    # Also send push notification to super_admin
+                    send_push_to_user(
+                        admin['id'],
+                        '🔔 New Member Registration',
+                        f"{name} has registered and is pending approval.",
+                        url='/admin?tab=pending'
                     )
             except Exception:
                 pass  # Don't block registration if notification fails
@@ -4680,8 +4687,10 @@ def send_push_notification(category, title, body, exclude_user_id=None):
         db.close()
 
 
-def send_push_to_user(user_id, title, body):
+def send_push_to_user(user_id, title, body, url=None):
     """Send push notification to a specific user by user_id."""
+    if url is None:
+        url = '/members/discussions'
     if not _firebase_initialized:
         print(f"[PUSH STUB] Would send to user {user_id}: {title}: {body}")
         return
@@ -4700,14 +4709,14 @@ def send_push_to_user(user_id, title, body):
                         data={
                             'title': title,
                             'body': body,
-                            'url': '/members/discussions',
+                            'url': url,
                         }
                     ),
                     token=token,
                 )
                 fcm_messaging.send(message)
                 # Save notification to DB after successful send
-                save_notification(user_id, title, body, 'direct', '/members/discussions')
+                save_notification(user_id, title, body, 'direct', url)
             except Exception as e:
                 if 'INVALID_ARGUMENT' in str(e) or 'NOT_FOUND' in str(e):
                     invalid_tokens.append(token)
