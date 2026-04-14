@@ -4541,6 +4541,17 @@ def run_migrations():
     except Exception:
         pass
 
+    # Clean up existing bad rows: remove member-only categories from family users
+    try:
+        db.execute("""
+            DELETE FROM notification_preferences
+            WHERE category IN ('events','meetings','member_chat','member_discuss_general','member_discuss_union','member_discuss_social','member_discuss_questions')
+            AND user_id IN (SELECT id FROM members WHERE role = 'family')
+        """)
+        db.commit()
+    except Exception:
+        pass
+
     db.close()
 
 
@@ -4560,12 +4571,30 @@ def send_push_notification(category, title, body, exclude_user_id=None):
     
     db = get_db()
     try:
+        # Define member-only categories
+        MEMBER_ONLY_CATEGORIES = {
+            'events', 'meetings', 'member_chat',
+            'member_discuss_general', 'member_discuss_union',
+            'member_discuss_social', 'member_discuss_questions'
+        }
+        
         # Build query to get tokens for users who have this category enabled
-        query = """
-            SELECT pt.token FROM push_tokens pt
-            JOIN notification_preferences np ON pt.user_id = np.user_id
-            WHERE np.category = ? AND np.enabled = 1
-        """
+        if category in MEMBER_ONLY_CATEGORIES:
+            # Exclude family users from member-only categories
+            query = """
+                SELECT pt.token FROM push_tokens pt
+                JOIN notification_preferences np ON pt.user_id = np.user_id
+                JOIN members m ON pt.user_id = m.id
+                WHERE np.category = ? AND np.enabled = 1
+                AND m.role != 'family'
+            """
+        else:
+            query = """
+                SELECT pt.token FROM push_tokens pt
+                JOIN notification_preferences np ON pt.user_id = np.user_id
+                WHERE np.category = ? AND np.enabled = 1
+            """
+        
         params = [category]
         if exclude_user_id:
             query += " AND pt.user_id != ?"
@@ -4705,12 +4734,27 @@ def register_push_token():
                 "INSERT INTO push_tokens (user_id, token) VALUES (?, ?)",
                 (session['user_id'], token)
             )
-            # Seed default notification preferences for this user if not already set
-            default_categories = [
-                'events', 'meetings', 'member_chat',
-                'member_discuss_general', 'member_discuss_union', 'member_discuss_social', 'member_discuss_questions',
-                'family_events', 'family_community_events', 'family_chat', 'family_discuss', 'family_announcements'
-            ]
+            # Seed notification preferences based on user role
+            # Look up user's role from members table
+            user = db.execute(
+                "SELECT role FROM members WHERE id = ?",
+                (session['user_id'],)
+            ).fetchone()
+            
+            # Determine which categories to seed based on role
+            if user and user['role'] == 'family':
+                # Family users only get family categories
+                default_categories = [
+                    'family_events', 'family_community_events', 'family_chat', 'family_discuss', 'family_announcements'
+                ]
+            else:
+                # Members (and other roles) get all categories
+                default_categories = [
+                    'events', 'meetings', 'member_chat',
+                    'member_discuss_general', 'member_discuss_union', 'member_discuss_social', 'member_discuss_questions',
+                    'family_events', 'family_community_events', 'family_chat', 'family_discuss', 'family_announcements'
+                ]
+            
             for cat in default_categories:
                 exists = db.execute(
                     "SELECT id FROM notification_preferences WHERE user_id = ? AND category = ?",
