@@ -4,7 +4,7 @@ import secrets
 import smtplib
 import threading
 import requests
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from functools import wraps
@@ -277,11 +277,13 @@ def events():
     db = get_db()
     
     # Get events visible on public homepage (LIKE for comma-separated values)
+    today = datetime.now().strftime('%Y-%m-%d')
     public_events = db.execute("""
         SELECT * FROM events 
         WHERE visibility LIKE '%public_homepage%' 
+        AND event_date >= ?
         ORDER BY event_date ASC
-    """).fetchall()
+    """, (today,)).fetchall()
     
     db.close()
     
@@ -683,8 +685,10 @@ def shift_calendar():
     
     # Fetch public events from database
     db = get_db()
+    today = datetime.now().strftime('%Y-%m-%d')
     events = db.execute(
-        "SELECT * FROM events WHERE visibility LIKE '%public_homepage%' ORDER BY event_date ASC"
+        "SELECT * FROM events WHERE visibility LIKE '%public_homepage%' AND event_date >= ? ORDER BY event_date ASC",
+        (today,)
     ).fetchall()
     db.close()
     
@@ -3088,17 +3092,26 @@ def members_events():
     
     db = get_db()
     member_id = get_member_id()
+    today = date.today().isoformat()
     
-    # Fetch events visible in member portal (LIKE for comma-separated values)
-    events = db.execute("""
+    # Fetch upcoming events (event_date >= today)
+    upcoming_events = db.execute("""
         SELECT * FROM events 
         WHERE (visibility LIKE '%member_portal%' OR visibility LIKE '%public_homepage%')
+        AND event_date >= ?
         ORDER BY event_date ASC
-    """).fetchall()
+    """, (today,)).fetchall()
     
-    # For each event, get signup info
-    events_list = []
-    for event in events:
+    # Fetch past events (event_date < today)
+    past_events = db.execute("""
+        SELECT * FROM events 
+        WHERE (visibility LIKE '%member_portal%' OR visibility LIKE '%public_homepage%')
+        AND event_date < ?
+        ORDER BY event_date DESC
+    """, (today,)).fetchall()
+    
+    # Helper function to enrich event with signup info
+    def enrich_event(event, include_user_status=True):
         event_dict = dict(event)
         
         # Parse supplies JSON
@@ -3110,12 +3123,13 @@ def members_events():
         else:
             event_dict['supplies_list'] = []
         
-        # Check if current member is signed up
-        signup = db.execute(
-            "SELECT * FROM event_signups WHERE event_id=? AND member_id=?",
-            (event_dict['id'], member_id)
-        ).fetchone()
-        event_dict['user_signed_up'] = signup is not None
+        # Check if current member is signed up (only for upcoming)
+        if include_user_status:
+            signup = db.execute(
+                "SELECT * FROM event_signups WHERE event_id=? AND member_id=?",
+                (event_dict['id'], member_id)
+            ).fetchone()
+            event_dict['user_signed_up'] = signup is not None
         
         # Get list of members who signed up
         signups = db.execute(
@@ -3124,12 +3138,19 @@ def members_events():
         ).fetchall()
         event_dict['signups_list'] = [dict(s)['name'] for s in signups]
         
-        events_list.append(event_dict)
+        return event_dict
+    
+    # Enrich upcoming events
+    upcoming_list = [enrich_event(event, include_user_status=True) for event in upcoming_events]
+    
+    # Enrich past events
+    past_list = [enrich_event(event, include_user_status=False) for event in past_events]
     
     db.close()
     
     return render_template('member_events.html', 
-        events=events_list, 
+        upcoming_events=upcoming_list,
+        past_events=past_list,
         username=get_member_name(),
         is_board=is_board_member())
 
@@ -3669,13 +3690,37 @@ def add_document():
     title = request.form.get('title', '').strip()
     description = request.form.get('description', '').strip()
     url = request.form.get('url', '').strip()
+    file = request.files.get('file')
     
     if not title:
         flash('Title is required.', 'error')
         return redirect(url_for('member_documents'))
     
-    if not url:
-        flash('URL is required.', 'error')
+    # Handle file upload or URL
+    if file and file.filename:
+        # File upload
+        from werkzeug.utils import secure_filename
+        import os
+        
+        filename = secure_filename(file.filename)
+        if not filename:
+            flash('Invalid filename.', 'error')
+            return redirect(url_for('member_documents'))
+        
+        documents_dir = os.path.join(app.root_path, 'static', 'documents')
+        os.makedirs(documents_dir, exist_ok=True)
+        
+        file_path = os.path.join(documents_dir, filename)
+        file.save(file_path)
+        
+        # Store the relative URL path
+        url = f'/static/documents/{filename}'
+    elif url:
+        # External URL provided
+        pass
+    else:
+        # Neither file nor URL provided
+        flash('Please upload a file or provide a URL.', 'error')
         return redirect(url_for('member_documents'))
     
     db = get_db()
@@ -4702,6 +4747,7 @@ def send_push_to_user(user_id, title, body, url=None):
         if not tokens:
             return
         invalid_tokens = []
+        sent = False
         for token in tokens:
             try:
                 message = fcm_messaging.Message(
@@ -4715,11 +4761,13 @@ def send_push_to_user(user_id, title, body, url=None):
                     token=token,
                 )
                 fcm_messaging.send(message)
-                # Save notification to DB after successful send
-                save_notification(user_id, title, body, 'direct', url)
+                sent = True
             except Exception as e:
                 if 'INVALID_ARGUMENT' in str(e) or 'NOT_FOUND' in str(e):
                     invalid_tokens.append(token)
+        # Save notification once (regardless of how many tokens the user has)
+        if sent or tokens:
+            save_notification(user_id, title, body, 'direct', url)
         if invalid_tokens:
             for t in invalid_tokens:
                 db.execute("DELETE FROM push_tokens WHERE token = ?", (t,))

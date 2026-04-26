@@ -5,13 +5,13 @@
 
 <!-- Page Banner -->
 <section class="bg-navy text-white py-12">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
             <h1 class="font-heading font-bold text-3xl md:text-4xl text-white">Bulletin Board</h1>
             <p class="text-gray-400 mt-2">Union announcements and updates</p>
         </div>
         {% if is_board %}
-        <a href="#new-post" class="flex items-center gap-2 bg-fire hover:bg-red-700 text-white text-sm font-semibold px-4 py-2 rounded transition">
+        <a href="#new-post" class="flex items-center gap-2 bg-fire hover:bg-red-700 text-white text-sm font-semibold px-4 py-2 rounded transition self-start sm:self-auto">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
             New Post
         </a>
