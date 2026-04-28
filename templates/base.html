@@ -41,8 +41,10 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     {% block head %}{% endblock %}
 </head>
+{% set use_portal_app_chrome = session.get('user_id') and request.path in ['/members', '/family'] %}
 <body class="bg-gray-50 text-gray-900 flex flex-col min-h-screen">
 
+    {% if not use_portal_app_chrome %}
     <!-- Top utility bar -->
     <div class="bg-navy-xdark text-gray-400 text-xs py-1.5 hidden md:block">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex justify-between items-center">
@@ -171,6 +173,7 @@
             </div>
         </div>
     </nav>
+    {% endif %}
 
     <!-- Flash Messages -->
     {% with messages = get_flashed_messages(with_categories=true) %}
@@ -190,7 +193,7 @@
     {% endwith %}
 
     <!-- General Membership Meeting Banner -->
-    {% if next_gm_meeting and session.get('user_id') %}
+    {% if next_gm_meeting and session.get('user_id') and not use_portal_app_chrome %}
     <div class="bg-fire text-white px-4 py-3">
         <div class="max-w-7xl mx-auto flex items-center justify-center gap-3 text-center flex-wrap">
             <span class="text-xl">🔔</span>
@@ -219,7 +222,7 @@
     {% endif %}
 
     <!-- Persistent Portal Navigation -->
-    {% if session.get('user_id') and (request.path.startswith('/members') or request.path.startswith('/family')) and not request.path.startswith('/admin') %}
+    {% if show_legacy_portal_nav|default(false) and session.get('user_id') and (request.path.startswith('/members') or request.path.startswith('/family')) and not request.path.startswith('/admin') and not use_portal_app_chrome %}
     <div class="bg-white border-b border-gray-200 shadow-sm">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex flex-wrap">
@@ -256,7 +259,26 @@
         {% block content %}{% endblock %}
     </main>
 
+    {% if session.get('user_id') and request.path.startswith('/members') and not request.path.startswith('/members/get-the-app') %}
+    <nav class="app-bottom-nav" aria-label="Member navigation">
+        <a href="/members" class="{% if request.path == '/members' %}is-active{% endif %}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m3 10 9-7 9 7"/><path d="M5 10v10h14V10"/></svg><span>Home</span></a>
+        <a href="/members/events" class="{% if request.path.startswith('/members/events') or request.path.startswith('/members/meetings') %}is-active{% endif %}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg><span>Events</span></a>
+        <a href="/members/chat" class="{% if request.path.startswith('/members/chat') %}is-active{% endif %}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4Z"/></svg><span>Chat</span></a>
+        <a href="/members/photos" class="{% if request.path.startswith('/members/photos') %}is-active{% endif %}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="m21 15-5-5L5 21"/></svg><span>Photos</span></a>
+        <a href="/members/profile" class="{% if request.path.startswith('/members/profile') %}is-active{% endif %}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M20 21a8 8 0 0 0-16 0"/></svg><span>Profile</span></a>
+    </nav>
+    {% elif session.get('user_id') and request.path.startswith('/family') and not request.path.startswith('/family/get-the-app') %}
+    <nav class="app-bottom-nav" aria-label="Family navigation">
+        <a href="/family" class="{% if request.path == '/family' %}is-active{% endif %}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m3 10 9-7 9 7"/><path d="M5 10v10h14V10"/></svg><span>Home</span></a>
+        <a href="/family/events" class="{% if request.path.startswith('/family/events') %}is-active{% endif %}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg><span>Events</span></a>
+        <a href="/family/chat" class="{% if request.path.startswith('/family/chat') %}is-active{% endif %}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4Z"/></svg><span>Chat</span></a>
+        <a href="/family/photos" class="{% if request.path.startswith('/family/photos') %}is-active{% endif %}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="m21 15-5-5L5 21"/></svg><span>Photos</span></a>
+        <a href="/family/roster" class="{% if request.path.startswith('/family/roster') %}is-active{% endif %}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M20 21a8 8 0 0 0-16 0"/></svg><span>Directory</span></a>
+    </nav>
+    {% endif %}
+
     <!-- Footer -->
+    {% if not use_portal_app_chrome %}
     <footer class="bg-navy-xdark text-gray-400 mt-auto">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
             <div class="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
@@ -287,6 +309,7 @@
             </div>
         </div>
     </footer>
+    {% endif %}
 
     <!-- Profile Photo Upload Modal -->
     <div id="photo-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">

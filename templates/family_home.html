@@ -1,146 +1,131 @@
 {% extends "base.html" %}
-{% block title %}Family Portal · Local 3494{% endblock %}
+{% block title %}Family Home - Local 3494{% endblock %}
 
 {% block content %}
-<section class="bg-navy py-12">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="text-fire font-heading font-semibold text-xs uppercase tracking-widest mb-2">Family Portal</div>
-        <h1 class="font-heading font-bold text-3xl text-white">Welcome to the Local 3494 Family Portal</h1>
-        <p class="text-gray-400 mt-1">Connected to our firefighting family</p>
-    </div>
-</section>
-<div class="h-1 bg-gradient-to-r from-fire via-red-400 to-fire"></div>
+{% set next_event = upcoming_events[0] if upcoming_events else none %}
+{% set months = {'01':'Jan','02':'Feb','03':'Mar','04':'Apr','05':'May','06':'Jun','07':'Jul','08':'Aug','09':'Sep','10':'Oct','11':'Nov','12':'Dec'} %}
 
-<section class="py-12 bg-gray-50">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+<section class="app-shell family-shell">
+    <header class="app-topbar">
+        <a href="/" class="app-brand" aria-label="Local 3494 home">
+            <span class="app-brand__mark">3494</span>
+            <span>
+                <span class="app-brand__overline">Davis Professional Firefighters</span>
+                <span class="app-brand__name">Local 3494</span>
+            </span>
+        </a>
+        <div class="app-topbar__actions">
+            <a href="/family/roster" class="app-avatar" title="Directory">{{ username[0] if username else '?' }}</a>
+        </div>
+    </header>
 
-        <!-- Quick Links Grid -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
-
-            <!-- Events -->
-            <a href="/family/events" class="bg-white border border-gray-200 hover:border-fire hover:shadow-md rounded-lg p-6 transition group">
-                <div class="w-10 h-10 bg-fire/10 rounded-lg flex items-center justify-center mb-4 group-hover:bg-fire/20 transition">
-                    <svg class="w-5 h-5 text-fire" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
-                </div>
-                <h3 class="font-heading font-bold text-navy mb-1">Upcoming Events</h3>
-                <p class="text-gray-500 text-sm">See community events and gatherings</p>
-            </a>
-
-            <!-- Directory -->
-            <a href="/family/roster" class="bg-white border border-gray-200 hover:border-fire hover:shadow-md rounded-lg p-6 transition group">
-                <div class="w-10 h-10 bg-fire/10 rounded-lg flex items-center justify-center mb-4 group-hover:bg-fire/20 transition">
-                    <svg class="w-5 h-5 text-fire" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.856-1.487M15 10a3 3 0 11-6 0 3 3 0 016 0zM6 20v-2a3 3 0 016 0v2H6z"/></svg>
-                </div>
-                <h3 class="font-heading font-bold text-navy mb-1">Family Directory</h3>
-                <p class="text-gray-500 text-sm">Meet our firefighters and families</p>
-            </a>
-
-            <!-- Announcements -->
-            <a href="/family/announcements" class="bg-white border border-gray-200 hover:border-fire hover:shadow-md rounded-lg p-6 transition group">
-                <div class="w-10 h-10 bg-fire/10 rounded-lg flex items-center justify-center mb-4 group-hover:bg-fire/20 transition">
-                    <svg class="w-5 h-5 text-fire" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5.882V19.24a1.961 1.961 0 01-2.773-1.753v-5.844m0 0a2.25 2.25 0 00-1.557-2.049 2.25 2.25 0 00-2.659 2.122 2.247 2.247 0 002.773 2.050 2.247 2.247 0 001.557-2.05zM7 13h4m8-8v12m0 0l-3.794-3.794a1 1 0 00-1.414 0L9.172 9.172"/></svg>
-                </div>
-                <h3 class="font-heading font-bold text-navy mb-1">Announcements</h3>
-                <p class="text-gray-500 text-sm">Stay updated on union news</p>
-            </a>
-
-            <!-- Photos -->
-            <a href="/family/photos" class="bg-white border border-gray-200 hover:border-fire hover:shadow-md rounded-lg p-6 transition group">
-                <div class="w-10 h-10 bg-fire/10 rounded-lg flex items-center justify-center mb-4 group-hover:bg-fire/20 transition">
-                    <svg class="w-5 h-5 text-fire" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-                </div>
-                <h3 class="font-heading font-bold text-navy mb-1">Photo Gallery</h3>
-                <p class="text-gray-500 text-sm">Share and view family moments</p>
-            </a>
-
-            <!-- Chat -->
-            <a href="/family/chat" class="bg-white border border-gray-200 hover:border-fire hover:shadow-md rounded-lg p-6 transition group">
-                <div class="w-10 h-10 bg-fire/10 rounded-lg flex items-center justify-center mb-4 group-hover:bg-fire/20 transition">
-                    <svg class="w-5 h-5 text-fire" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                </div>
-                <h3 class="font-heading font-bold text-navy mb-1">Family Chat</h3>
-                <p class="text-gray-500 text-sm">Connect with other families</p>
-            </a>
-
-            <!-- Discussions -->
-            <a href="/family/discussions" class="bg-white border border-gray-200 hover:border-fire hover:shadow-md rounded-lg p-6 transition group">
-                <div class="w-10 h-10 bg-fire/10 rounded-lg flex items-center justify-center mb-4 group-hover:bg-fire/20 transition">
-                    <svg class="w-5 h-5 text-fire" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"/></svg>
-                </div>
-                <h3 class="font-heading font-bold text-navy mb-1">Discussions</h3>
-                <p class="text-gray-500 text-sm">Join community discussions</p>
-            </a>
-
-            <!-- Family Store -->
-            <a href="/family/store" class="bg-white border border-gray-200 hover:border-fire hover:shadow-md rounded-lg p-6 transition group">
-                <div class="w-10 h-10 bg-fire/10 rounded-lg flex items-center justify-center mb-4 group-hover:bg-fire/20 transition">
-                    <svg class="w-5 h-5 text-fire" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/></svg>
-                </div>
-                <h3 class="font-heading font-bold text-navy mb-1">Family Store</h3>
-                <p class="text-gray-500 text-sm">Exclusive family apparel</p>
-            </a>
-
-            <!-- Peer Support -->
-            <a href="/family/peer-support" class="bg-white border border-gray-200 hover:border-fire hover:shadow-md rounded-lg p-6 transition group">
-                <div class="w-10 h-10 bg-fire/10 rounded-lg flex items-center justify-center mb-4 group-hover:bg-fire/20 transition">
-                    <svg class="w-5 h-5 text-fire" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg>
-                </div>
-                <h3 class="font-heading font-bold text-navy mb-1">Peer Support</h3>
-                <p class="text-gray-500 text-sm">Mental health and peer support resources</p>
-            </a>
+    <main class="app-main">
+        <div class="mode-switch" aria-label="Portal mode">
+            {% if role != 'family' %}
+            <a href="/members" class="mode-switch__item">Member</a>
+            {% else %}
+            <span class="mode-switch__item is-muted">Member</span>
+            {% endif %}
+            <a href="/family" class="mode-switch__item is-active">Family</a>
         </div>
 
-        <!-- Upcoming Events Preview -->
-        {% if upcoming_events %}
-        <div class="bg-white border border-gray-200 rounded-lg p-8 mb-8">
-            <h2 class="font-heading font-bold text-2xl text-navy mb-6">Upcoming Events</h2>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {% for event in upcoming_events %}
-                <div class="border border-gray-200 rounded-lg p-6 hover:shadow-md transition">
-                    <div class="text-fire font-semibold text-sm mb-2">{{ event.event_date }}</div>
-                    <h3 class="font-heading font-bold text-navy mb-2">{{ event.title }}</h3>
-                    <p class="text-gray-600 text-sm mb-3">📍 {{ event.location }}</p>
-                    <p class="text-gray-700 text-sm line-clamp-2">{{ event.description }}</p>
-                    <a href="/family/events" class="text-fire hover:text-fire-dark text-sm font-semibold mt-4 inline-block">See all events →</a>
-                </div>
-                {% endfor %}
+        <div class="app-heading">
+            <div>
+                <p class="app-kicker">Welcome back, {{ username }}</p>
+                <h1>Family Home</h1>
             </div>
+            <a href="/family/events" class="portal-button portal-button--primary">Post</a>
         </div>
-        {% endif %}
 
-        <!-- Trending Discussions -->
-        {% if trending_discussions %}
-        <div class="bg-white border border-gray-200 rounded-lg p-8 mb-8">
-            <h2 class="font-heading font-bold text-2xl text-navy mb-6">Trending Discussions</h2>
-            <div class="space-y-3">
-                {% for post in trending_discussions %}
-                <a href="/family/discussions/post/{{ post.id }}" class="block p-4 border border-gray-100 hover:border-fire rounded-lg hover:shadow-md transition group">
-                    <div class="flex items-start gap-3">
-                        <div class="w-8 h-8 rounded-full bg-navy text-white flex items-center justify-center text-xs font-bold flex-shrink-0">
-                            {% if post.profile_photo %}
-                                <img src="{{ get_profile_photo(post.author_id) }}" alt="{{ post.author_name }}" class="w-full h-full rounded-full object-cover">
-                            {% else %}
-                                {{ post.author_name[0] if post.author_name else '?' }}
-                            {% endif %}
-                        </div>
-                        <div class="flex-1 min-w-0">
-                            <h4 class="font-semibold text-navy group-hover:text-fire transition truncate">{{ post.title }}</h4>
-                            <div class="text-xs text-gray-600">
-                                by {{ post.author_name }} • 💬 {{ post.comment_count }} comment{% if post.comment_count != 1 %}s{% endif %}
-                            </div>
-                        </div>
+        <section class="next-card">
+            <div class="next-card__content">
+                <p class="portal-eyebrow">Next Up</p>
+                {% if next_event %}
+                <h2>{{ next_event.title }}</h2>
+                <p>{{ next_event.event_date }}{% if next_event.event_time %} at {{ next_event.event_time }}{% endif %}{% if next_event.location %} - {{ next_event.location }}{% endif %}</p>
+                {% else %}
+                <h2>No family events yet</h2>
+                <p>Community events and union updates will appear here.</p>
+                {% endif %}
+            </div>
+            <div class="date-badge">
+                {% if next_event %}
+                <span>{{ months.get(next_event.event_date[5:7], next_event.event_date[5:7]) }}</span>
+                <strong>{{ next_event.event_date[8:10] | int }}</strong>
+                {% else %}
+                <span>Local</span>
+                <strong class="date-badge__local">3494</strong>
+                {% endif %}
+            </div>
+            <div class="metric-row">
+                <div><strong>{{ upcoming_events|length }}</strong><span>Events</span></div>
+                <div><strong>{{ trending_discussions|length }}</strong><span>Updates</span></div>
+                <div><strong>Family</strong><span>Mode</span></div>
+            </div>
+        </section>
+
+        <section class="portal-grid" aria-label="Family tools">
+            <a href="/family/events" class="portal-tile">
+                <span class="tile-icon tile-icon--red"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 2v4"/><path d="M16 2v4"/><path d="M3 10h18"/><rect x="3" y="4" width="18" height="18" rx="2"/></svg></span>
+                <strong>Events</strong>
+                <span>Signups and gatherings</span>
+            </a>
+            <a href="/family/chat" class="portal-tile">
+                <span class="tile-icon tile-icon--gold"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4Z"/></svg></span>
+                <strong>Chat</strong>
+                <span>Family updates</span>
+            </a>
+            <a href="/family/photos" class="portal-tile">
+                <span class="tile-icon tile-icon--blue"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="m21 15-5-5L5 21"/><circle cx="8.5" cy="8.5" r="1.5"/></svg></span>
+                <strong>Photos</strong>
+                <span>Shared albums</span>
+            </a>
+            <a href="/family/roster" class="portal-tile">
+                <span class="tile-icon tile-icon--slate"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-8 0v2"/><circle cx="12" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span>
+                <strong>Directory</strong>
+                <span>Families and shifts</span>
+            </a>
+            <a href="/family/discussions" class="portal-tile">
+                <span class="tile-icon tile-icon--green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 8h10"/><path d="M7 12h6"/><path d="M21 12c0 4-4 7-9 7a10 10 0 0 1-4-.8L3 20l1.8-4A7.5 7.5 0 0 1 3 12c0-4 4-7 9-7s9 3 9 7Z"/></svg></span>
+                <strong>Discussions</strong>
+                <span>Recommendations</span>
+            </a>
+            <a href="/family/peer-support" class="portal-tile">
+                <span class="tile-icon tile-icon--purple"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 1 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8Z"/></svg></span>
+                <strong>Support</strong>
+                <span>Helpful resources</span>
+            </a>
+        </section>
+
+        <section class="activity-panel">
+            <div class="section-heading">
+                <h2>Recent family activity</h2>
+                <a href="/family/discussions">View all</a>
+            </div>
+            <div class="activity-list">
+                {% if trending_discussions %}
+                    {% for post in trending_discussions[:3] %}
+                    <a href="/family/discussions/post/{{ post.id }}" class="activity-item">
+                        <strong>{{ post.title }}</strong>
+                        <span>{{ post.comment_count }} comment{% if post.comment_count != 1 %}s{% endif %} - by {{ post.author_name or 'Local 3494' }}</span>
+                    </a>
+                    {% endfor %}
+                {% elif upcoming_events %}
+                    {% for event in upcoming_events[:3] %}
+                    <a href="/family/events" class="activity-item">
+                        <strong>{{ event.title }}</strong>
+                        <span>{{ event.event_date }}{% if event.location %} - {{ event.location }}{% endif %}</span>
+                    </a>
+                    {% endfor %}
+                {% else %}
+                    <div class="activity-item">
+                        <strong>Nothing new yet</strong>
+                        <span>Family announcements and discussions will show up here.</span>
                     </div>
-                </a>
-                {% endfor %}
+                {% endif %}
             </div>
-            <a href="/family/discussions" class="text-fire hover:text-fire-dark text-sm font-semibold mt-4 inline-block">View all discussions →</a>
-        </div>
-        {% endif %}
+        </section>
+    </main>
 
-        <!-- Sign out -->
-        <div class="mt-10 text-center">
-            <a href="/logout" class="text-gray-400 hover:text-fire text-sm font-medium transition">Sign Out</a>
-        </div>
-    </div>
 </section>
 {% endblock %}

@@ -6,6 +6,8 @@
 __pycache__/
 *.pyc
 *.pyo
+.venv/
+.pip-tmp/
 
 # Environment files
 .env
@@ -14,6 +16,7 @@ __pycache__/
 # Screenshots and temp files
 *.png
 *.jpg
+flask-local*.log
 
 # PA credentials (keep local only)
 pythonanywhere_creds.md

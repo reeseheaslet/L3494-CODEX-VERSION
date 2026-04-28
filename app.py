@@ -511,13 +511,22 @@ def members():
         ORDER BY event_date ASC
         LIMIT 6
     """, (today,)).fetchall()
+    calendar_events = db.execute("""
+        SELECT id, title, description, event_date, event_time, location, signup_enabled
+        FROM events
+        WHERE (visibility LIKE '%member_portal%' OR visibility LIKE '%public_homepage%')
+          AND event_date >= ?
+        ORDER BY event_date ASC
+        LIMIT 120
+    """, (today,)).fetchall()
     db.close()
     
     return render_template('members.html',
         logged_in=True,
         username=session.get('username', ''),
         role=session.get('role', 'member'),
-        upcoming_events=[dict(e) for e in upcoming_events])
+        upcoming_events=[dict(e) for e in upcoming_events],
+        calendar_events=[dict(e) for e in calendar_events])
 
 @app.route('/about')
 def about():
@@ -5067,5 +5076,5 @@ run_migrations()
 
 if __name__ == '__main__':
     update_agent_status('union-website-skeleton', 'done', 'Union website skeleton built successfully')
-    print("🔥 Union Website starting on http://localhost:5002")
+    print("Union Website starting on http://localhost:5002")
     app.run(host='0.0.0.0', port=5002, debug=False)
