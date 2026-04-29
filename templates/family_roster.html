@@ -51,7 +51,7 @@
                         <!-- Circular Avatar -->
                         <div class="w-16 h-16 rounded-full border-3 border-navy/20 flex items-center justify-center flex-shrink-0 text-sm font-bold text-white overflow-hidden bg-gradient-to-br from-navy to-navy-dark">
                             {% if member.profile_photo %}
-                                <img src="/static/images/profiles/{{ member.profile_photo }}" alt="{{ member.name }}" class="w-full h-full object-cover">
+                                <img src="/static/images/profiles/{{ member.profile_photo }}" alt="{{ member.name }}" class="w-full h-full object-cover cursor-pointer" onclick="openProfileLightbox('/static/images/profiles/{{ member.profile_photo }}', '{{ member.name }}')">
                             {% else %}
                                 {{ member.name[0].upper() if member.name else '?' }}
                             {% endif %}
@@ -96,7 +96,7 @@
                         <div class="flex items-center gap-3">
                             <div class="w-10 h-10 rounded-full border-2 border-navy/20 flex items-center justify-center flex-shrink-0 text-xs font-bold text-white overflow-hidden bg-gradient-to-br from-fire to-fire-dark">
                                 {% if member.spouse_photo %}
-                                    <img src="/static/images/profiles/{{ member.spouse_photo }}" alt="{{ member.spouse_name }}" class="w-full h-full object-cover">
+                                    <img src="/static/images/profiles/{{ member.spouse_photo }}" alt="{{ member.spouse_name }}" class="w-full h-full object-cover cursor-pointer" onclick="openProfileLightbox('/static/images/profiles/{{ member.spouse_photo }}', '{{ member.spouse_name }}')">
                                 {% else %}
                                     {{ member.spouse_name[0].upper() if member.spouse_name else '?' }}
                                 {% endif %}

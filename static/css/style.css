@@ -60,10 +60,10 @@
     width: min(100%, 420px);
     background: #fff;
     border: 1px solid var(--portal-line);
-    border-radius: 8px;
-    padding: 32px;
+    border-radius: 20px;
+    padding: 36px;
     text-align: center;
-    box-shadow: 0 18px 48px rgba(18, 35, 58, 0.08);
+    box-shadow: 0 4px 16px rgba(18, 35, 58, 0.08), 0 20px 48px rgba(18, 35, 58, 0.12);
 }
 
 .portal-auth__card h1 {
@@ -103,8 +103,10 @@
     padding-bottom: 96px;
 }
 
-body:has(.app-bottom-nav) main.flex-1 {
-    padding-bottom: 84px;
+@media (max-width: 767px) {
+    body:has(.app-bottom-nav) main.flex-1 {
+        padding-bottom: 84px;
+    }
 }
 
 .app-topbar {
@@ -205,7 +207,7 @@ body:has(.app-bottom-nav) main.flex-1 {
     gap: 4px;
     padding: 4px;
     margin-bottom: 22px;
-    border-radius: 8px;
+    border-radius: 14px;
     background: #dce4ee;
 }
 
@@ -213,7 +215,7 @@ body:has(.app-bottom-nav) main.flex-1 {
     min-height: 42px;
     display: grid;
     place-items: center;
-    border-radius: 6px;
+    border-radius: 12px;
     color: var(--portal-navy-2);
     font-family: Montserrat, sans-serif;
     font-size: 13px;
@@ -271,12 +273,12 @@ body:has(.app-bottom-nav) main.flex-1 {
 }
 
 .portal-button {
-    min-height: 40px;
+    min-height: 44px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    padding: 0 16px;
-    border-radius: 7px;
+    padding: 0 20px;
+    border-radius: 999px;
     font-family: Montserrat, sans-serif;
     font-size: 13px;
     font-weight: 800;
@@ -292,12 +294,12 @@ body:has(.app-bottom-nav) main.flex-1 {
     display: grid;
     grid-template-columns: 1fr auto;
     gap: 18px;
-    padding: 20px;
+    padding: 22px;
     margin-bottom: 18px;
     border: 1px solid var(--portal-line);
-    border-radius: 8px;
+    border-radius: 16px;
     background: var(--portal-panel);
-    box-shadow: 0 10px 28px rgba(18, 35, 58, 0.06);
+    box-shadow: 0 2px 8px rgba(18, 35, 58, 0.06), 0 12px 32px rgba(18, 35, 58, 0.10);
 }
 
 .next-card__content h2 {
@@ -318,7 +320,7 @@ body:has(.app-bottom-nav) main.flex-1 {
     display: grid;
     place-items: center;
     align-content: center;
-    border-radius: 8px;
+    border-radius: 14px;
     background: var(--portal-navy);
     color: #fff;
     font-family: Montserrat, sans-serif;
@@ -347,11 +349,11 @@ body:has(.app-bottom-nav) main.flex-1 {
 }
 
 .metric-row div {
-    min-height: 54px;
+    min-height: 60px;
     display: grid;
     place-items: center;
     align-content: center;
-    border-radius: 7px;
+    border-radius: 12px;
     background: #f1f4f7;
 }
 
@@ -383,24 +385,24 @@ body:has(.app-bottom-nav) main.flex-1 {
 }
 
 .portal-tile {
-    min-height: 118px;
+    min-height: 128px;
     display: grid;
     align-content: start;
     gap: 8px;
-    padding: 16px;
+    padding: 18px;
     border: 1px solid var(--portal-line);
-    border-radius: 8px;
+    border-radius: 16px;
     background: #fff;
     color: var(--portal-ink);
     text-decoration: none;
-    box-shadow: 0 8px 20px rgba(18, 35, 58, 0.04);
+    box-shadow: 0 2px 8px rgba(18, 35, 58, 0.06), 0 8px 24px rgba(18, 35, 58, 0.08);
     transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
 }
 
 .portal-tile:hover {
-    transform: translateY(-1px);
+    transform: translateY(-2px);
     border-color: rgba(196, 18, 48, 0.42);
-    box-shadow: 0 14px 28px rgba(18, 35, 58, 0.1);
+    box-shadow: 0 4px 12px rgba(18, 35, 58, 0.08), 0 20px 40px rgba(18, 35, 58, 0.14);
 }
 
 .portal-tile strong {
@@ -415,11 +417,11 @@ body:has(.app-bottom-nav) main.flex-1 {
 }
 
 .tile-icon {
-    width: 36px;
-    height: 36px;
+    width: 44px;
+    height: 44px;
     display: grid;
     place-items: center;
-    border-radius: 8px;
+    border-radius: 12px;
 }
 
 .tile-icon--red { background: #fde8ec; color: #b70f2b; }
@@ -509,11 +511,11 @@ body:has(.app-bottom-nav) main.flex-1 {
 }
 
 .shift-preview__panel {
-    padding: 14px;
+    padding: 16px;
     border: 1px solid var(--portal-line);
-    border-radius: 8px;
+    border-radius: 16px;
     background: #fff;
-    box-shadow: 0 8px 20px rgba(18, 35, 58, 0.04);
+    box-shadow: 0 2px 8px rgba(18, 35, 58, 0.06), 0 8px 24px rgba(18, 35, 58, 0.08);
 }
 
 .shift-preview__toolbar {
@@ -773,6 +775,12 @@ body:has(.app-bottom-nav) main.flex-1 {
 .app-bottom-nav a.is-active {
     color: var(--portal-red);
     background: #fff1f3;
+}
+
+@media (min-width: 768px) {
+    .app-bottom-nav {
+        display: none !important;
+    }
 }
 
 @media (min-width: 900px) {

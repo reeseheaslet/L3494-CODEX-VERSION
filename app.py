@@ -66,6 +66,7 @@ def inject_next_meeting():
     except Exception:
         return {'next_gm_meeting': None}
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=30)
 
 # Email configuration — Gmail SMTP
 SMTP_HOST = os.environ.get('SMTP_HOST', 'smtp.gmail.com')
@@ -316,6 +317,7 @@ def login():
             if user['status'] != 'active':
                 flash('Your account is pending approval. Please contact your union representative.', 'error')
                 return render_template('login.html')
+            session.permanent = True
             session['user_id'] = user['id']
             session['username'] = user['name']
             session['role'] = user['role']
@@ -3659,70 +3661,6 @@ def members_meetings_create():
     flash('General Membership Meeting scheduled!', 'success')
     return redirect(url_for('members_events'))
 
-# ========== PART C: Bulletin Board ==========
-@app.route('/members/bulletin')
-def members_bulletin():
-    """Show bulletin board posts"""
-    if not require_login():
-        return redirect(url_for('login'))
-    
-    db = get_db()
-    
-    # Get next membership meeting
-    from datetime import date
-    today = date.today().isoformat()
-    next_meeting = db.execute(
-        "SELECT * FROM general_meetings WHERE meeting_date >= ? ORDER BY meeting_date ASC LIMIT 1",
-        (today,)
-    ).fetchone()
-    next_meeting_dict = dict(next_meeting) if next_meeting else None
-    
-    # Get all bulletin posts, sorted by pinned first then by date descending
-    posts = db.execute("""
-        SELECT bp.*, m.name as author_name
-        FROM bulletin_posts bp
-        LEFT JOIN members m ON bp.author_id = m.id
-        ORDER BY bp.pinned DESC, bp.created_at DESC
-    """).fetchall()
-    
-    posts_list = [dict(p) for p in posts]
-    db.close()
-    
-    return render_template('bulletin.html',
-        posts=posts_list,
-        next_meeting=next_meeting_dict,
-        username=get_member_name(),
-        is_board=is_board_member())
-
-@app.route('/members/bulletin/post', methods=['POST'])
-def members_bulletin_post():
-    """Create a new bulletin post (board+ only)"""
-    if not require_login():
-        return redirect(url_for('login'))
-    
-    if not is_board_member():
-        flash('Only board members can create posts.', 'error')
-        return redirect(url_for('members_bulletin'))
-    
-    title = request.form.get('title', '').strip()
-    content = request.form.get('content', '').strip()
-    pinned = 1 if request.form.get('pinned') else 0
-    
-    if not title or not content:
-        flash('Please fill in all required fields.', 'error')
-        return redirect(url_for('members_bulletin'))
-    
-    db = get_db()
-    db.execute("""
-        INSERT INTO bulletin_posts (title, content, author_id, pinned)
-        VALUES (?, ?, ?, ?)
-    """, (title, content, get_member_id(), pinned))
-    db.commit()
-    db.close()
-    
-    flash('Post created successfully!', 'success')
-    return redirect(url_for('members_bulletin'))
-
 # ========== PART D: Member Chat ==========
 @app.route('/members/chat')
 def members_chat():
@@ -3979,9 +3917,9 @@ def family_discussions():
     
     db = get_db()
     
-    # Get all categories sorted by sort_order
+    # Get family-scoped categories only
     categories = db.execute("""
-        SELECT * FROM discussion_categories ORDER BY sort_order ASC
+        SELECT * FROM discussion_categories WHERE section = 'family' ORDER BY sort_order ASC
     """).fetchall()
     
     # Get post counts and last activity for each category
@@ -4129,7 +4067,7 @@ def new_discussion_post():
     
     # GET: show form
     categories = db.execute(
-        "SELECT id, name FROM discussion_categories ORDER BY sort_order ASC"
+        "SELECT id, name FROM discussion_categories WHERE section = 'family' ORDER BY sort_order ASC"
     ).fetchall()
     db.close()
     

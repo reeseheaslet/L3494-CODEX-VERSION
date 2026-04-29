@@ -32,7 +32,7 @@
                     📅 Events
                 </button>
                 <button class="tab-btn px-4 py-3 text-sm font-semibold border-b-2 border-transparent text-gray-600 hover:text-gray-900 transition" data-tab="bulletin">
-                    📢 Bulletin
+                    📢 Discussion Management
                 </button>
                 <button class="tab-btn px-4 py-3 text-sm font-semibold border-b-2 border-transparent text-gray-600 hover:text-gray-900 transition" data-tab="photos">
                     📸 Photos
@@ -347,53 +347,6 @@
             {% else %}
             <div class="p-8 text-center text-gray-500">
                 No events yet.
-            </div>
-            {% endif %}
-        </div>
-
-        <!-- TAB: Bulletin Board Management -->
-        <div id="bulletin" class="tab-content hidden bg-white rounded-b-lg shadow-sm p-6 mb-6">
-            <h2 class="font-heading font-bold text-xl text-navy mb-4">Bulletin Board Management</h2>
-            
-            {% if posts %}
-            <div class="space-y-4">
-                {% for post in posts %}
-                <div class="border {% if post.pinned %}border-fire bg-fire/5{% else %}border-gray-200{% endif %} rounded-lg p-4 hover:shadow-md transition">
-                    <div class="flex justify-between items-start mb-3">
-                        <div class="flex-1">
-                            <div class="flex items-center gap-2">
-                                <h3 class="font-semibold text-gray-900">{{ post.title }}</h3>
-                                {% if post.pinned %}
-                                <span class="px-2 py-0.5 bg-fire text-white rounded text-xs font-semibold">📌 Pinned</span>
-                                {% endif %}
-                            </div>
-                            <p class="text-sm text-gray-600 mt-1">By {{ post.author_name or 'Anonymous' }} • {{ post.created_at[:10] if post.created_at else 'N/A' }}</p>
-                            <p class="text-sm text-gray-700 mt-2 line-clamp-2">{{ post.content }}</p>
-                        </div>
-                        <div class="flex gap-2">
-                            <!-- Pin/Unpin Button -->
-                            <form method="POST" action="/admin/bulletin/pin" style="display: inline;">
-                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                <input type="hidden" name="post_id" value="{{ post.id }}">
-                                <button type="submit" class="px-3 py-2 {% if post.pinned %}bg-gray-400 hover:bg-gray-500{% else %}bg-yellow-600 hover:bg-yellow-700{% endif %} text-white rounded text-sm font-semibold transition">
-                                    {% if post.pinned %}Unpin{% else %}Pin{% endif %}
-                                </button>
-                            </form>
-                            
-                            <!-- Delete Button -->
-                            <form method="POST" action="/admin/bulletin/delete" style="display: inline;" onsubmit="return confirm('Delete this post?');">
-                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                <input type="hidden" name="post_id" value="{{ post.id }}">
-                                <button type="submit" class="px-3 py-2 bg-red-600 hover:bg-red-700 text-white rounded text-sm font-semibold transition">Delete</button>
-                            </form>
-                        </div>
-                    </div>
-                </div>
-                {% endfor %}
-            </div>
-            {% else %}
-            <div class="p-8 text-center text-gray-500">
-                No bulletin posts yet.
             </div>
             {% endif %}
         </div>

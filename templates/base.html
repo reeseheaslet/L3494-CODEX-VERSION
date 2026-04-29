@@ -80,7 +80,8 @@
                     {% if session.get('user_id') %}
                     <!-- User Profile / Portal -->
                     <div class="ml-3 flex items-center gap-2">
-                        <!-- User Notification Bell -->
+                        {% if request.path.startswith('/members') or request.path.startswith('/family') %}
+                        <!-- User Notification Bell (member/family portal pages only) -->
                         <div class="relative" id="notif-bell-wrapper">
                             <button id="notif-bell-btn" class="relative flex items-center justify-center w-8 h-8 text-gray-300 hover:text-white transition" title="Notifications" aria-label="Notifications">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -105,6 +106,7 @@
                             <span class="absolute -top-1 -right-1 bg-fire text-white text-xs font-bold rounded-full w-4 h-4 flex items-center justify-center leading-none">{{ total_notification_count if total_notification_count < 10 else '9+' }}</span>
                             {% endif %}
                         </a>
+                        {% endif %}
                         {% endif %}
                         <!-- Profile Photo Avatar -->
                         <button onclick="togglePhotoModal()" class="w-8 h-8 rounded-full border-2 border-fire hover:border-white transition flex items-center justify-center bg-navy text-xs font-bold text-white cursor-pointer hover:ring-2 hover:ring-fire/20" title="Change profile photo">
@@ -268,7 +270,7 @@
                 <a href="/family/photos" class="px-5 py-3 text-sm font-semibold transition border-b-2 {% if request.path.startswith('/family/photos') and not request.path.startswith('/family/photos/albums') %}text-navy border-fire{% else %}text-gray-500 border-transparent hover:text-navy hover:border-gray-300{% endif %}">📸 Photos</a>
                 <a href="/family/photos/albums" class="px-5 py-3 text-sm font-semibold transition border-b-2 {% if request.path.startswith('/family/photos/albums') %}text-navy border-fire{% else %}text-gray-500 border-transparent hover:text-navy hover:border-gray-300{% endif %}">🗂️ Albums</a>
                 <a href="/family/store" class="px-5 py-3 text-sm font-semibold transition border-b-2 {% if request.path.startswith('/family/store') %}text-navy border-fire{% else %}text-gray-500 border-transparent hover:text-navy hover:border-gray-300{% endif %}">🛍️ Store</a>
-                <a href="/family/get-the-app" class="px-5 py-3 text-sm font-semibold transition border-b-2 {% if request.path.startswith('/family/get-the-app') %}text-navy border-fire{% else %}text-gray-500 border-transparent hover:text-navy hover:border-gray-300{% endif %}">📱 Get the App</a>
+                <a href="/family/get-the-app" class="px-5 py-3 text-sm font-semibold transition border-b-2 {% if request.path.startswith('/family/get-the-app') %}text-navy border-fire{% else %}text-gray-500 border-transparent hover:text-navy hover:border-gray-300{% endif %}">📱 Get the App — Notifications</a>
                 {% else %}
                 <!-- Member portal nav -->
                 <a href="/members" class="px-5 py-3 text-sm font-semibold transition border-b-2 {% if request.path == '/members' %}text-navy border-fire{% else %}text-gray-500 border-transparent hover:text-navy hover:border-gray-300{% endif %}">🏠 Home</a>
@@ -278,7 +280,7 @@
                 <a href="/members/chat" class="px-5 py-3 text-sm font-semibold transition border-b-2 {% if request.path.startswith('/members/chat') %}text-navy border-fire{% else %}text-gray-500 border-transparent hover:text-navy hover:border-gray-300{% endif %}">💬 Chat</a>
                 <a href="/members/documents" class="px-5 py-3 text-sm font-semibold transition border-b-2 {% if request.path.startswith('/members/documents') %}text-navy border-fire{% else %}text-gray-500 border-transparent hover:text-navy hover:border-gray-300{% endif %}">📄 Documents</a>
                 <a href="/members/profile" class="px-5 py-3 text-sm font-semibold transition border-b-2 {% if request.path.startswith('/members/profile') %}text-navy border-fire{% else %}text-gray-500 border-transparent hover:text-navy hover:border-gray-300{% endif %}">👤 Profile</a>
-                <a href="/members/get-the-app" class="px-5 py-3 text-sm font-semibold transition border-b-2 {% if request.path.startswith('/members/get-the-app') %}text-navy border-fire{% else %}text-gray-500 border-transparent hover:text-navy hover:border-gray-300{% endif %}">📱 Get the App</a>
+                <a href="/members/get-the-app" class="px-5 py-3 text-sm font-semibold transition border-b-2 {% if request.path.startswith('/members/get-the-app') %}text-navy border-fire{% else %}text-gray-500 border-transparent hover:text-navy hover:border-gray-300{% endif %}">📱 Get the App — Notifications</a>
                 {% endif %}
             </div>
         </div>
@@ -481,7 +483,7 @@
     <script>
     // ===== Notification Bell =====
     (function() {
-        function initBell(btnId, dropdownId, badgeId, listId, markReadId, wrapperId) {
+        window.initBell = function(btnId, dropdownId, badgeId, listId, markReadId, wrapperId) {
             const btn = document.getElementById(btnId);
             const dropdown = document.getElementById(dropdownId);
             const badge = document.getElementById(badgeId);
@@ -571,6 +573,31 @@
         initBell('notif-bell-btn', 'notif-dropdown', 'notif-badge', 'notif-list', 'notif-mark-read', 'notif-bell-wrapper');
         initBell('notif-bell-btn-mobile', 'notif-dropdown-mobile', 'notif-badge-mobile', 'notif-list-mobile', 'notif-mark-read-mobile', 'notif-bell-wrapper-mobile');
     })();
+    </script>
+
+    <!-- Profile Photo Lightbox -->
+    <div id="profile-lightbox" class="hidden fixed inset-0 bg-black/80 z-[100] flex items-center justify-center p-4 cursor-pointer" onclick="closeProfileLightbox()">
+        <div class="flex flex-col items-center gap-4 max-w-sm w-full" onclick="event.stopPropagation()">
+            <img id="profile-lightbox-img" src="" alt="" class="w-64 h-64 rounded-full object-cover border-4 border-white shadow-2xl">
+            <p id="profile-lightbox-name" class="text-white font-bold text-xl text-center"></p>
+            <button onclick="closeProfileLightbox()" class="text-gray-400 hover:text-white text-sm transition">✕ Close</button>
+        </div>
+    </div>
+    <script>
+    function openProfileLightbox(src, name) {
+        document.getElementById('profile-lightbox-img').src = src;
+        document.getElementById('profile-lightbox-img').alt = name;
+        document.getElementById('profile-lightbox-name').textContent = name;
+        document.getElementById('profile-lightbox').classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+    }
+    function closeProfileLightbox() {
+        document.getElementById('profile-lightbox').classList.add('hidden');
+        document.body.style.overflow = '';
+    }
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') closeProfileLightbox();
+    });
     </script>
 </body>
 </html>
