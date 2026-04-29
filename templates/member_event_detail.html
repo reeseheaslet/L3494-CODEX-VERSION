@@ -157,34 +157,37 @@
                     <h2 class="font-heading font-bold text-lg text-navy mb-4">Event Discussion</h2>
 
                     <!-- Messages List -->
+                    <div id="event-messages" data-messages-url="/members/events/{{ event.id }}/messages">
                     {% if messages %}
-                    <div class="space-y-4 mb-6 max-h-96 overflow-y-auto">
+                    <div class="space-y-4 mb-6 max-h-96 overflow-y-auto event-message-list">
                         {% for msg in messages %}
-                        <div class="border border-gray-100 rounded p-3 bg-gray-50">
+                        <div class="border border-gray-100 rounded p-3 bg-gray-50 event-message" data-message-id="{{ msg.id }}">
                             <div class="flex items-center justify-between mb-1">
                                 <p class="text-sm font-semibold text-navy">{{ msg.name }}</p>
-                                <p class="text-xs text-gray-500">{{ msg.created_at[11:16] if msg.created_at else '' }}</p>
+                                <p class="text-xs text-gray-500">{{ msg.short_time }}</p>
                             </div>
                             <p class="text-sm text-gray-700">{{ msg.message }}</p>
                         </div>
                         {% endfor %}
                     </div>
                     {% else %}
-                    <div class="text-center py-6 bg-gray-50 rounded mb-6">
+                    <div class="text-center py-6 bg-gray-50 rounded mb-6 empty-event-messages">
                         <p class="text-gray-500 text-sm">No messages yet. Be the first to post!</p>
                     </div>
                     {% endif %}
+                    </div>
 
                     <!-- Post Message Form -->
                     <div class="pt-4 border-t border-gray-100">
                         <h3 class="text-sm font-semibold text-navy mb-3">Post a Message</h3>
-                        <form method="POST" action="/members/events/{{ event.id }}/message" class="space-y-2">
+                        <form method="POST" action="/members/events/{{ event.id }}/message" class="space-y-2" id="event-message-form">
                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                            <textarea name="message" rows="3" placeholder="Share your thoughts..." class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:border-fire focus:outline-none focus:ring-1 focus:ring-fire" required></textarea>
+                            <textarea name="message" id="event-message-input" rows="3" placeholder="Share your thoughts..." class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:border-fire focus:outline-none focus:ring-1 focus:ring-fire" required></textarea>
                             <button type="submit" class="bg-fire hover:bg-fire-dark text-white px-4 py-2 rounded text-sm font-semibold transition">
                                 Post Message
                             </button>
                         </form>
+                        <p id="event-live-status" class="text-xs text-gray-500 mt-2">Live event discussion on</p>
                     </div>
                 </div>
 
@@ -240,5 +243,116 @@
         </div>
     </div>
 </section>
+
+<script>
+const eventMessagesRoot = document.getElementById('event-messages');
+const eventMessageForm = document.getElementById('event-message-form');
+const eventMessageInput = document.getElementById('event-message-input');
+const eventLiveStatus = document.getElementById('event-live-status');
+let lastEventMessageId = 0;
+let loadingEventMessages = false;
+
+function escapeHtml(value) {
+    const div = document.createElement('div');
+    div.textContent = value || '';
+    return div.innerHTML;
+}
+
+function ensureEventMessageList() {
+    if (!eventMessagesRoot) return null;
+    let list = eventMessagesRoot.querySelector('.event-message-list');
+    if (!list) {
+        const empty = eventMessagesRoot.querySelector('.empty-event-messages');
+        if (empty) empty.remove();
+        list = document.createElement('div');
+        list.className = 'space-y-4 mb-6 max-h-96 overflow-y-auto event-message-list';
+        eventMessagesRoot.appendChild(list);
+    }
+    return list;
+}
+
+function updateLastEventMessageId() {
+    if (!eventMessagesRoot) return;
+    eventMessagesRoot.querySelectorAll('[data-message-id]').forEach(function(message) {
+        lastEventMessageId = Math.max(lastEventMessageId, Number(message.dataset.messageId || 0));
+    });
+}
+
+function appendEventMessage(message) {
+    if (!eventMessagesRoot || !message || !message.id || eventMessagesRoot.querySelector('[data-message-id="' + message.id + '"]')) return;
+    const list = ensureEventMessageList();
+    if (!list) return;
+    const stayAtBottom = list.scrollHeight - list.scrollTop - list.clientHeight < 90;
+    const card = document.createElement('div');
+    card.className = 'border border-gray-100 rounded p-3 bg-gray-50 event-message';
+    card.dataset.messageId = message.id;
+    card.innerHTML = `
+        <div class="flex items-center justify-between mb-1">
+            <p class="text-sm font-semibold text-navy">${escapeHtml(message.name || 'Unknown')}</p>
+            <p class="text-xs text-gray-500">${escapeHtml(message.short_time || '')}</p>
+        </div>
+        <p class="text-sm text-gray-700">${escapeHtml(message.message || '')}</p>
+    `;
+    list.appendChild(card);
+    lastEventMessageId = Math.max(lastEventMessageId, Number(message.id));
+    if (stayAtBottom || message.is_mine) {
+        list.scrollTop = list.scrollHeight;
+    }
+}
+
+async function loadNewEventMessages() {
+    if (!eventMessagesRoot || loadingEventMessages) return;
+    loadingEventMessages = true;
+    try {
+        const response = await fetch(eventMessagesRoot.dataset.messagesUrl + '?after_id=' + lastEventMessageId, {
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        });
+        if (!response.ok) throw new Error('Unable to load messages');
+        const data = await response.json();
+        if (data.success) {
+            data.messages.forEach(appendEventMessage);
+            if (eventLiveStatus) eventLiveStatus.textContent = 'Live event discussion on';
+        }
+    } catch (error) {
+        if (eventLiveStatus) eventLiveStatus.textContent = 'Live event discussion paused. We will retry automatically.';
+    } finally {
+        loadingEventMessages = false;
+    }
+}
+
+if (eventMessagesRoot) {
+    updateLastEventMessageId();
+    setInterval(loadNewEventMessages, 5000);
+    document.addEventListener('visibilitychange', function() {
+        if (!document.hidden) loadNewEventMessages();
+    });
+}
+
+if (eventMessageForm && eventMessageInput) {
+    eventMessageForm.addEventListener('submit', async function(event) {
+        event.preventDefault();
+        if (!eventMessageInput.value.trim()) return;
+        const submitButton = eventMessageForm.querySelector('button[type="submit"]');
+        if (submitButton) submitButton.disabled = true;
+        try {
+            const response = await fetch(eventMessageForm.action, {
+                method: 'POST',
+                body: new FormData(eventMessageForm),
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            });
+            const data = await response.json();
+            if (!response.ok || !data.success) throw new Error('Message failed');
+            appendEventMessage(data.message);
+            eventMessageInput.value = '';
+            eventMessageInput.focus();
+            if (eventLiveStatus) eventLiveStatus.textContent = 'Message posted';
+        } catch (error) {
+            if (eventLiveStatus) eventLiveStatus.textContent = 'Message did not post. Please try again.';
+        } finally {
+            if (submitButton) submitButton.disabled = false;
+        }
+    });
+}
+</script>
 
 {% endblock %}

@@ -18,6 +18,36 @@
     --portal-bg: #f3f6f9;
 }
 
+.public-brand-mark {
+    width: 42px;
+    height: 42px;
+    display: grid;
+    place-items: center;
+    border: 2px solid rgba(255, 255, 255, 0.35);
+    border-radius: 8px;
+    background: #c41230;
+    color: #fff;
+    font-family: Montserrat, sans-serif;
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0;
+}
+
+.leader-avatar {
+    width: 128px;
+    height: 128px;
+    display: grid;
+    place-items: center;
+    margin: 0 auto 16px;
+    border: 1px solid #dce2ea;
+    border-radius: 999px;
+    background: #f3f6f9;
+    color: #1e3a5c;
+    font-family: Montserrat, sans-serif;
+    font-size: 30px;
+    font-weight: 800;
+}
+
 .portal-auth {
     min-height: 65vh;
     display: grid;
@@ -67,7 +97,7 @@
 }
 
 .app-shell {
-    min-height: calc(100vh - 64px);
+    min-height: calc(100vh - 156px);
     background: var(--portal-bg);
     color: var(--portal-ink);
     padding-bottom: 96px;
@@ -85,6 +115,16 @@ body:has(.app-bottom-nav) main.flex-1 {
     padding: 18px clamp(16px, 5vw, 32px);
     background: var(--portal-navy);
     color: #fff;
+}
+
+.portal-mode-wrap {
+    padding: 12px clamp(16px, 5vw, 32px) 0;
+    background: var(--portal-bg);
+}
+
+.portal-mode-wrap .mode-switch {
+    width: min(100%, 696px);
+    margin: 0 auto;
 }
 
 .app-brand {
@@ -393,6 +433,56 @@ body:has(.app-bottom-nav) main.flex-1 {
     margin-bottom: 12px;
 }
 
+.connection-panel {
+    display: grid;
+    gap: 16px;
+    padding: 20px;
+    margin-bottom: 18px;
+    border: 1px solid #cfd8e4;
+    border-radius: 8px;
+    background: #fff;
+    box-shadow: 0 10px 28px rgba(18, 35, 58, 0.06);
+}
+
+.connection-panel h2 {
+    margin: 4px 0 8px;
+    color: var(--portal-ink);
+    font-size: 20px;
+    line-height: 1.2;
+}
+
+.connection-panel p:last-child {
+    margin: 0;
+    color: var(--portal-muted);
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+.connection-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.connection-actions a {
+    min-height: 40px;
+    display: grid;
+    place-items: center;
+    border-radius: 7px;
+    background: #edf2f6;
+    color: var(--portal-navy);
+    font-family: Montserrat, sans-serif;
+    font-size: 12px;
+    font-weight: 800;
+    text-align: center;
+    text-decoration: none;
+}
+
+.connection-actions a:first-child {
+    background: var(--portal-red);
+    color: #fff;
+}
+
 .shift-preview {
     margin-bottom: 18px;
 }
@@ -687,7 +777,7 @@ body:has(.app-bottom-nav) main.flex-1 {
 
 @media (min-width: 900px) {
     .app-shell {
-        min-height: calc(100vh - 64px);
+        min-height: calc(100vh - 156px);
         padding-bottom: 110px;
     }
 
@@ -701,6 +791,10 @@ body:has(.app-bottom-nav) main.flex-1 {
 }
 
 @media (max-width: 520px) {
+    .portal-mode-wrap {
+        padding-top: 10px;
+    }
+
     .app-brand__overline {
         display: none;
     }
@@ -733,6 +827,10 @@ body:has(.app-bottom-nav) main.flex-1 {
 
     .shift-legend {
         grid-template-columns: repeat(2, 1fr);
+    }
+
+    .connection-actions {
+        grid-template-columns: 1fr;
     }
 
     .mini-calendar__cell {

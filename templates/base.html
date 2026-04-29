@@ -41,7 +41,8 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     {% block head %}{% endblock %}
 </head>
-{% set use_portal_app_chrome = session.get('user_id') and request.path in ['/members', '/family'] %}
+{% set is_portal_path = session.get('user_id') and (request.path.startswith('/members') or request.path.startswith('/family')) and not request.path.startswith('/members/get-the-app') and not request.path.startswith('/family/get-the-app') %}
+{% set use_portal_app_chrome = is_portal_path %}
 <body class="bg-gray-50 text-gray-900 flex flex-col min-h-screen">
 
     {% if not use_portal_app_chrome %}
@@ -60,7 +61,7 @@
 
                 <!-- Logo / Branding -->
                 <a href="/" class="flex items-center gap-3 group">
-                    <img src="/static/davis-logo.jpg" alt="City of Davis" class="h-10 w-auto rounded">
+                    <span class="public-brand-mark">3494</span>
                     <div class="hidden sm:block">
                         <div class="text-white font-heading font-bold text-base leading-tight">Davis Professional Firefighters</div>
                         <div class="text-gray-400 text-xs">Local 3494</div>
@@ -191,6 +192,36 @@
         </div>
         {% endif %}
     {% endwith %}
+
+    {% if use_portal_app_chrome %}
+    <header class="app-topbar">
+        <a href="/" class="app-brand" aria-label="Local 3494 home">
+            <span class="app-brand__mark">3494</span>
+            <span>
+                <span class="app-brand__overline">Davis Professional Firefighters</span>
+                <span class="app-brand__name">Local 3494</span>
+            </span>
+        </a>
+        <div class="app-topbar__actions">
+            {% if session.get('role') in ('admin', 'super_admin') %}
+            <a href="/admin" class="icon-button" title="Admin">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 15.5A3.5 3.5 0 1 0 12 8a3.5 3.5 0 0 0 0 7.5Z"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.04.04a2 2 0 1 1-2.83 2.83l-.04-.04A1.7 1.7 0 0 0 15 19.4a1.7 1.7 0 0 0-1 .6V20a2 2 0 1 1-4 0v-.06a1.7 1.7 0 0 0-1-.6 1.7 1.7 0 0 0-1.88.34l-.04.04a2 2 0 1 1-2.83-2.83l.04-.04A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-.6-1H4a2 2 0 1 1 0-4h.06a1.7 1.7 0 0 0 .6-1 1.7 1.7 0 0 0-.34-1.88l-.04-.04A2 2 0 1 1 7.11 4.25l.04.04A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1-.6V4a2 2 0 1 1 4 0v.06a1.7 1.7 0 0 0 1 .6 1.7 1.7 0 0 0 1.88-.34l.04-.04a2 2 0 1 1 2.83 2.83l-.04.04A1.7 1.7 0 0 0 19.4 9c.22.35.42.68.6 1H20a2 2 0 1 1 0 4h-.06a1.7 1.7 0 0 0-.54 1Z"/></svg>
+            </a>
+            {% endif %}
+            <a href="{% if request.path.startswith('/family') %}/family/roster{% else %}/members/profile{% endif %}" class="app-avatar" title="Profile">{{ session.get('username', '?')[0] if session.get('username') else '?' }}</a>
+        </div>
+    </header>
+    <div class="portal-mode-wrap">
+        <div class="mode-switch" aria-label="Portal mode">
+            {% if session.get('role') != 'family' %}
+            <a href="/members" class="mode-switch__item {% if request.path.startswith('/members') %}is-active{% endif %}">Member</a>
+            {% else %}
+            <span class="mode-switch__item is-muted">Member</span>
+            {% endif %}
+            <a href="/family" class="mode-switch__item {% if request.path.startswith('/family') %}is-active{% endif %}">Family</a>
+        </div>
+    </div>
+    {% endif %}
 
     <!-- General Membership Meeting Banner -->
     {% if next_gm_meeting and session.get('user_id') and not use_portal_app_chrome %}
@@ -341,9 +372,13 @@
     </div>
 
     <script>
-        document.getElementById('mobile-menu-btn').addEventListener('click', function() {
-            document.getElementById('mobile-menu').classList.toggle('hidden');
-        });
+        const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+        const mobileMenu = document.getElementById('mobile-menu');
+        if (mobileMenuBtn && mobileMenu) {
+            mobileMenuBtn.addEventListener('click', function() {
+                mobileMenu.classList.toggle('hidden');
+            });
+        }
 
         function togglePhotoModal() {
             const modal = document.getElementById('photo-modal');

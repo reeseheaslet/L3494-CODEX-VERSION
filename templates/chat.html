@@ -20,10 +20,10 @@
         <div class="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden flex flex-col" style="height: 600px;">
 
             <!-- Messages Area -->
-            <div class="flex-1 overflow-y-auto p-6 space-y-4" id="messages-container">
+            <div class="flex-1 overflow-y-auto p-6 space-y-4" id="messages-container" data-messages-url="/members/chat/messages">
                 {% if messages %}
                     {% for msg in messages %}
-                    <div class="flex gap-3">
+                    <div class="flex gap-3 chat-message" data-message-id="{{ msg.id }}">
                         <div class="flex-shrink-0">
                             <div class="w-8 h-8 rounded-full bg-navy/20 flex items-center justify-center text-xs font-bold text-navy">
                                 {{ msg.member_name[0].upper() if msg.member_name else '?' }}
@@ -39,7 +39,7 @@
                     </div>
                     {% endfor %}
                 {% else %}
-                <div class="flex flex-col items-center justify-center h-full text-center">
+                <div class="flex flex-col items-center justify-center h-full text-center empty-chat-message">
                     <svg class="w-12 h-12 text-gray-300 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                     <p class="text-gray-500 text-sm">No messages yet. Start the conversation!</p>
                 </div>
@@ -48,11 +48,12 @@
 
             <!-- Message Input -->
             <div class="border-t border-gray-200 bg-gray-50 p-4">
-                <form method="POST" action="/members/chat/send" class="flex gap-2">
+                <form method="POST" action="/members/chat/send" class="flex gap-2" id="chat-form">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <input 
                         type="text" 
                         name="message" 
+                        id="chat-message-input"
                         placeholder="Type a message..." 
                         required 
                         autocomplete="off"
@@ -70,18 +71,127 @@
         <div class="mt-6 bg-navy/5 border border-navy/20 rounded-lg px-6 py-4">
             <div class="text-xs text-navy font-semibold mb-2">💬 HOW IT WORKS</div>
             <p class="text-sm text-gray-700">
-                This is a simple message board. Messages are displayed for all members. Refresh the page to see new messages. 
+                New messages appear automatically while this page is open.
                 Keep discussions professional and respectful.
             </p>
+            <p id="chat-live-status" class="text-xs text-gray-500 mt-2">Checking for new messages...</p>
         </div>
     </div>
 </section>
 
 <script>
-    // Auto-scroll to bottom on load
     const container = document.getElementById('messages-container');
+    const chatForm = document.getElementById('chat-form');
+    const chatInput = document.getElementById('chat-message-input');
+    const liveStatus = document.getElementById('chat-live-status');
+    let lastMessageId = 0;
+    let isLoadingMessages = false;
+
+    function escapeHtml(value) {
+        const div = document.createElement('div');
+        div.textContent = value || '';
+        return div.innerHTML;
+    }
+
+    function highlightMentions(value) {
+        return escapeHtml(value).replace(/@(\w+)/g, '<span class="mention-tag">@$1</span>');
+    }
+
+    function updateLastMessageId() {
+        if (!container) return;
+        container.querySelectorAll('[data-message-id]').forEach(function(message) {
+            lastMessageId = Math.max(lastMessageId, Number(message.dataset.messageId || 0));
+        });
+    }
+
+    function shouldStickToBottom() {
+        if (!container) return false;
+        return container.scrollHeight - container.scrollTop - container.clientHeight < 90;
+    }
+
+    function appendMessage(message) {
+        if (!container || !message || !message.id || container.querySelector('[data-message-id="' + message.id + '"]')) return;
+        const stayAtBottom = shouldStickToBottom();
+        const empty = container.querySelector('.empty-chat-message');
+        if (empty) empty.remove();
+
+        const row = document.createElement('div');
+        row.className = 'flex gap-3 chat-message';
+        row.dataset.messageId = message.id;
+        const initial = (message.member_name || '?').trim().charAt(0).toUpperCase() || '?';
+        row.innerHTML = `
+            <div class="flex-shrink-0">
+                <div class="w-8 h-8 rounded-full bg-navy/20 flex items-center justify-center text-xs font-bold text-navy">${escapeHtml(initial)}</div>
+            </div>
+            <div class="flex-1">
+                <div class="flex items-baseline gap-2">
+                    <span class="text-sm font-semibold text-navy">${escapeHtml(message.member_name || 'Unknown')}</span>
+                    <span class="text-xs text-gray-500">${escapeHtml(message.friendly_time || message.created_at || '')}</span>
+                </div>
+                <p class="text-sm text-gray-700 mt-1 break-words">${highlightMentions(message.message || '')}</p>
+            </div>
+        `;
+        container.appendChild(row);
+        lastMessageId = Math.max(lastMessageId, Number(message.id));
+        if (stayAtBottom || message.is_mine) {
+            container.scrollTop = container.scrollHeight;
+        }
+    }
+
+    async function loadNewMessages() {
+        if (!container || isLoadingMessages) return;
+        isLoadingMessages = true;
+        try {
+            const response = await fetch(container.dataset.messagesUrl + '?after_id=' + lastMessageId, {
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            });
+            if (!response.ok) throw new Error('Unable to load messages');
+            const data = await response.json();
+            if (data.success) {
+                data.messages.forEach(appendMessage);
+                if (liveStatus) liveStatus.textContent = 'Live updates on';
+            }
+        } catch (error) {
+            if (liveStatus) liveStatus.textContent = 'Live updates paused. We will retry automatically.';
+        } finally {
+            isLoadingMessages = false;
+        }
+    }
+
     if (container) {
+        updateLastMessageId();
         container.scrollTop = container.scrollHeight;
+        setInterval(loadNewMessages, 4000);
+        document.addEventListener('visibilitychange', function() {
+            if (!document.hidden) loadNewMessages();
+        });
+    }
+
+    if (chatForm && chatInput) {
+        chatForm.addEventListener('submit', async function(event) {
+            event.preventDefault();
+            const messageText = chatInput.value.trim();
+            if (!messageText) return;
+            const submitButton = chatForm.querySelector('button[type="submit"]');
+            if (submitButton) submitButton.disabled = true;
+            try {
+                const response = await fetch(chatForm.action, {
+                    method: 'POST',
+                    body: new FormData(chatForm),
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                });
+                const data = await response.json();
+                if (!response.ok || !data.success) throw new Error('Message failed');
+                appendMessage(data.message);
+                chatInput.value = '';
+                chatInput.focus();
+                if (liveStatus) liveStatus.textContent = 'Message sent';
+            } catch (error) {
+                if (liveStatus) liveStatus.textContent = 'Message did not send. Please try again.';
+            } finally {
+                if (submitButton) submitButton.disabled = false;
+            }
+        });
     }
 </script>
 

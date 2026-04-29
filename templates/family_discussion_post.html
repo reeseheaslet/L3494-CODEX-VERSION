@@ -88,12 +88,13 @@
 
         <!-- Comments Section -->
         <div class="mb-8">
-            <h2 class="font-heading font-bold text-2xl text-navy mb-6">Comments ({{ comments | length }})</h2>
+            <h2 class="font-heading font-bold text-2xl text-navy mb-6">Comments (<span id="reply-count">{{ comments | length }}</span>)</h2>
             
+            <div id="discussion-comments" data-comments-url="/family/discussions/post/{{ post.id }}/comments">
             {% if comments %}
-            <div class="space-y-4 mb-8">
+            <div class="space-y-4 mb-8 discussion-comment-list">
                 {% for comment in comments %}
-                <div class="bg-white border border-gray-200 rounded-lg p-6">
+                <div class="bg-white border border-gray-200 rounded-lg p-6 discussion-comment" data-comment-id="{{ comment.id }}">
                     <div class="flex items-start gap-3 mb-3">
                         <div class="w-10 h-10 rounded-full bg-navy text-white flex items-center justify-center text-sm font-bold flex-shrink-0">
                             {% if comment.profile_photo %}
@@ -134,20 +135,21 @@
                 {% endfor %}
             </div>
             {% else %}
-            <div class="bg-gray-100 rounded-lg p-6 text-center text-gray-600 mb-8">
+            <div class="bg-gray-100 rounded-lg p-6 text-center text-gray-600 mb-8 empty-comments-message">
                 No comments yet. Be the first to reply!
             </div>
             {% endif %}
+            </div>
         </div>
 
         <!-- Add Comment Form -->
         {% if not post.locked %}
         <div class="bg-white border border-gray-200 rounded-lg p-8">
             <h3 class="font-heading font-bold text-lg text-navy mb-4">Add a Comment</h3>
-            <form method="POST" action="/family/discussions/post/{{ post.id }}/comment" enctype="multipart/form-data">
+            <form method="POST" action="/family/discussions/post/{{ post.id }}/comment" enctype="multipart/form-data" id="discussion-comment-form">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <div class="mb-4">
-                    <textarea name="body" required placeholder="Share your thoughts..." rows="4" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-fire focus:ring-2 focus:ring-fire/20"></textarea>
+                    <textarea name="body" id="discussion-comment-input" required placeholder="Share your thoughts..." rows="4" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-fire focus:ring-2 focus:ring-fire/20"></textarea>
                 </div>
                 <div class="mb-4">
                     <label class="text-sm text-gray-600 block mb-2">Attach an image (optional)</label>
@@ -157,6 +159,7 @@
                     Post Comment
                 </button>
             </form>
+            <p id="discussion-live-status" class="text-xs text-gray-500 mt-3">Live comments on</p>
         </div>
         {% endif %}
 
@@ -229,6 +232,139 @@ function toggleCommentReaction(commentId, type) {
         document.querySelector(selector).textContent = type === 'like' ? data.likes : data.hearts;
     })
     .catch(err => console.error('Error:', err));
+}
+
+const commentsRoot = document.getElementById('discussion-comments');
+const commentForm = document.getElementById('discussion-comment-form');
+const commentInput = document.getElementById('discussion-comment-input');
+const replyCount = document.getElementById('reply-count');
+const liveStatus = document.getElementById('discussion-live-status');
+let lastCommentId = 0;
+let loadingComments = false;
+
+function escapeHtml(value) {
+    const div = document.createElement('div');
+    div.textContent = value || '';
+    return div.innerHTML;
+}
+
+function highlightMentions(value) {
+    return escapeHtml(value).replace(/@(\w+)/g, '<span class="mention-tag">@$1</span>');
+}
+
+function ensureCommentList() {
+    if (!commentsRoot) return null;
+    let list = commentsRoot.querySelector('.discussion-comment-list');
+    if (!list) {
+        const empty = commentsRoot.querySelector('.empty-comments-message');
+        if (empty) empty.remove();
+        list = document.createElement('div');
+        list.className = 'space-y-4 mb-8 discussion-comment-list';
+        commentsRoot.appendChild(list);
+    }
+    return list;
+}
+
+function updateLastCommentId() {
+    if (!commentsRoot) return;
+    commentsRoot.querySelectorAll('[data-comment-id]').forEach(function(comment) {
+        lastCommentId = Math.max(lastCommentId, Number(comment.dataset.commentId || 0));
+    });
+}
+
+function setReplyCount() {
+    if (replyCount && commentsRoot) {
+        replyCount.textContent = commentsRoot.querySelectorAll('[data-comment-id]').length;
+    }
+}
+
+function appendComment(comment) {
+    if (!commentsRoot || !comment || !comment.id || commentsRoot.querySelector('[data-comment-id="' + comment.id + '"]')) return;
+    const list = ensureCommentList();
+    if (!list) return;
+    const initial = (comment.author_name || '?').trim().charAt(0).toUpperCase() || '?';
+    const imageHtml = comment.image_filename
+        ? `<div class="mb-3"><img src="/static/images/discussion_attachments/${escapeHtml(comment.image_filename)}" alt="Comment attachment" class="max-w-full h-auto rounded"></div>`
+        : '';
+    const card = document.createElement('div');
+    card.className = 'bg-white border border-gray-200 rounded-lg p-6 discussion-comment';
+    card.dataset.commentId = comment.id;
+    card.innerHTML = `
+        <div class="flex items-start gap-3 mb-3">
+            <div class="w-10 h-10 rounded-full bg-navy text-white flex items-center justify-center text-sm font-bold flex-shrink-0">${escapeHtml(initial)}</div>
+            <div class="flex-1">
+                <div class="font-semibold text-navy">${escapeHtml(comment.author_name || 'Anonymous')}</div>
+                <div class="text-xs text-gray-500">${escapeHtml(comment.friendly_time || comment.created_at || '')}</div>
+            </div>
+        </div>
+        <p class="text-gray-800 mb-3 whitespace-pre-wrap">${highlightMentions(comment.body || '')}</p>
+        ${imageHtml}
+        <div class="flex gap-3 text-xs">
+            <button onclick="toggleCommentReaction(${Number(comment.id)}, 'like')" class="px-3 py-1 rounded bg-gray-100 text-gray-600 hover:bg-gray-200 transition">
+                Like <span id="like-${Number(comment.id)}">${Number(comment.like_count || 0)}</span>
+            </button>
+            <button onclick="toggleCommentReaction(${Number(comment.id)}, 'heart')" class="px-3 py-1 rounded bg-gray-100 text-gray-600 hover:bg-gray-200 transition">
+                Heart <span id="heart-${Number(comment.id)}">${Number(comment.heart_count || 0)}</span>
+            </button>
+        </div>
+    `;
+    list.appendChild(card);
+    lastCommentId = Math.max(lastCommentId, Number(comment.id));
+    setReplyCount();
+}
+
+async function loadNewComments() {
+    if (!commentsRoot || loadingComments) return;
+    loadingComments = true;
+    try {
+        const response = await fetch(commentsRoot.dataset.commentsUrl + '?after_id=' + lastCommentId, {
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        });
+        if (!response.ok) throw new Error('Unable to load comments');
+        const data = await response.json();
+        if (data.success) {
+            data.comments.forEach(appendComment);
+            if (liveStatus) liveStatus.textContent = 'Live comments on';
+        }
+    } catch (error) {
+        if (liveStatus) liveStatus.textContent = 'Live comments paused. We will retry automatically.';
+    } finally {
+        loadingComments = false;
+    }
+}
+
+if (commentsRoot) {
+    updateLastCommentId();
+    setInterval(loadNewComments, 5000);
+    document.addEventListener('visibilitychange', function() {
+        if (!document.hidden) loadNewComments();
+    });
+}
+
+if (commentForm && commentInput) {
+    commentForm.addEventListener('submit', async function(event) {
+        event.preventDefault();
+        if (!commentInput.value.trim()) return;
+        const submitButton = commentForm.querySelector('button[type="submit"]');
+        if (submitButton) submitButton.disabled = true;
+        try {
+            const response = await fetch(commentForm.action, {
+                method: 'POST',
+                body: new FormData(commentForm),
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            });
+            const data = await response.json();
+            if (!response.ok || !data.success) throw new Error('Comment failed');
+            appendComment(data.comment);
+            commentForm.reset();
+            commentInput.focus();
+            if (liveStatus) liveStatus.textContent = 'Comment posted';
+        } catch (error) {
+            if (liveStatus) liveStatus.textContent = 'Comment did not post. Please try again.';
+        } finally {
+            if (submitButton) submitButton.disabled = false;
+        }
+    });
 }
 </script>
 {% endblock %}

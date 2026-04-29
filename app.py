@@ -2320,6 +2320,103 @@ def upload_profile_photo():
         flash('An error occurred while uploading the photo. Please try again.', 'error')
         return redirect(request.referrer or url_for('family_home'))
 
+def format_member_chat_message(row):
+    """Shape a member chat row for browser polling."""
+    msg = dict(row)
+    msg['member_name'] = msg.get('member_name') or 'Unknown'
+    msg['friendly_time'] = friendly_time_filter(msg.get('created_at'))
+    msg['is_mine'] = msg.get('member_id') == get_member_id()
+    return msg
+
+def get_member_chat_message(db, message_id):
+    row = db.execute("""
+        SELECT cm.*, m.name as member_name
+        FROM chat_messages cm
+        LEFT JOIN members m ON cm.member_id = m.id
+        WHERE cm.id = ?
+    """, (message_id,)).fetchone()
+    return format_member_chat_message(row) if row else None
+
+def format_family_chat_message(db, row):
+    """Shape a family chat row and include the firefighter relation label."""
+    msg = dict(row)
+    if msg.get('role') == 'family' and msg.get('linked_member_id'):
+        linked_member = db.execute(
+            "SELECT name FROM members WHERE id=?",
+            (msg['linked_member_id'],)
+        ).fetchone()
+        if linked_member:
+            msg['display_name'] = f"{msg.get('member_name') or 'Family member'} (family of {linked_member['name']})"
+        else:
+            msg['display_name'] = msg.get('member_name') or 'Family member'
+    else:
+        msg['display_name'] = msg.get('member_name') or 'Local 3494'
+    msg['friendly_time'] = friendly_time_filter(msg.get('created_at'))
+    msg['is_mine'] = msg.get('member_id') == get_member_id()
+    return msg
+
+def get_family_chat_message(db, message_id):
+    row = db.execute("""
+        SELECT fc.id, fc.member_id, fc.message, fc.created_at, m.name as member_name, m.role, m.linked_member_id
+        FROM family_chat fc
+        LEFT JOIN members m ON fc.member_id = m.id
+        WHERE fc.id = ?
+    """, (message_id,)).fetchone()
+    return format_family_chat_message(db, row) if row else None
+
+def format_discussion_comment(row):
+    """Shape a discussion comment for live reply updates."""
+    comment = dict(row)
+    comment['author_name'] = comment.get('author_name') or 'Anonymous'
+    comment['friendly_time'] = friendly_time_filter(comment.get('created_at'))
+    comment['is_mine'] = comment.get('author_id') == get_member_id()
+    comment['profile_photo_url'] = get_profile_photo(comment.get('author_id')) if comment.get('author_id') else ''
+    comment['like_count'] = comment.get('like_count', 0)
+    comment['heart_count'] = comment.get('heart_count', 0)
+    comment['user_liked'] = bool(comment.get('user_liked'))
+    comment['user_hearted'] = bool(comment.get('user_hearted'))
+    return comment
+
+def get_family_discussion_comment(db, comment_id):
+    row = db.execute("""
+        SELECT dc.*, m.name as author_name, m.profile_photo, m.id as author_id,
+               (SELECT COUNT(*) FROM discussion_reactions WHERE comment_id = dc.id AND reaction_type = 'like') as like_count,
+               (SELECT COUNT(*) FROM discussion_reactions WHERE comment_id = dc.id AND reaction_type = 'heart') as heart_count,
+               (SELECT COUNT(*) FROM discussion_reactions WHERE comment_id = dc.id AND member_id = ? AND reaction_type = 'like') as user_liked,
+               (SELECT COUNT(*) FROM discussion_reactions WHERE comment_id = dc.id AND member_id = ? AND reaction_type = 'heart') as user_hearted
+        FROM discussion_comments dc
+        LEFT JOIN members m ON dc.author_id = m.id
+        WHERE dc.id = ? AND dc.hidden = 0
+    """, (get_member_id(), get_member_id(), comment_id)).fetchone()
+    return format_discussion_comment(row) if row else None
+
+def get_member_discussion_comment(db, comment_id):
+    row = db.execute("""
+        SELECT dc.*, m.name as author_name, m.profile_photo as author_photo, m.id as author_id
+        FROM discussion_comments dc
+        LEFT JOIN members m ON dc.author_id = m.id
+        WHERE dc.id = ? AND dc.hidden = 0
+    """, (comment_id,)).fetchone()
+    return format_discussion_comment(row) if row else None
+
+def format_event_message(row):
+    """Shape an event message for live event-discussion updates."""
+    message = dict(row)
+    message['name'] = message.get('name') or 'Unknown'
+    message['friendly_time'] = friendly_time_filter(message.get('created_at'))
+    message['short_time'] = str(message.get('created_at') or '')[11:16]
+    message['is_mine'] = message.get('member_id') == get_member_id()
+    return message
+
+def get_event_message(db, message_id):
+    row = db.execute("""
+        SELECT em.id, em.event_id, em.member_id, em.message, em.created_at, m.name
+        FROM event_messages em
+        JOIN members m ON em.member_id = m.id
+        WHERE em.id = ?
+    """, (message_id,)).fetchone()
+    return format_event_message(row) if row else None
+
 @app.route('/family/chat')
 def family_chat():
     """Show family chat"""
@@ -2328,32 +2425,19 @@ def family_chat():
     
     db = get_db()
     
-    # Fetch last 50 messages with member info
+    # Fetch the newest 50 messages, then display them oldest-to-newest.
     messages = db.execute("""
-        SELECT fc.id, fc.member_id, fc.message, fc.created_at, m.name as member_name, m.role, m.linked_member_id
-        FROM family_chat fc
-        LEFT JOIN members m ON fc.member_id = m.id
-        ORDER BY fc.created_at ASC
-        LIMIT 50
+        SELECT * FROM (
+            SELECT fc.id, fc.member_id, fc.message, fc.created_at, m.name as member_name, m.role, m.linked_member_id
+            FROM family_chat fc
+            LEFT JOIN members m ON fc.member_id = m.id
+            ORDER BY fc.id DESC
+            LIMIT 50
+        )
+        ORDER BY id ASC
     """).fetchall()
     
-    # Get linked member names for family members
-    messages_list = []
-    for msg in messages:
-        msg_dict = dict(msg)
-        if msg_dict['role'] == 'family' and msg_dict['linked_member_id']:
-            # Get the linked firefighter's name
-            linked_member = db.execute(
-                "SELECT name FROM members WHERE id=?",
-                (msg_dict['linked_member_id'],)
-            ).fetchone()
-            if linked_member:
-                msg_dict['display_name'] = f"{msg_dict['member_name']} (family of {linked_member['name']})"
-            else:
-                msg_dict['display_name'] = msg_dict['member_name']
-        else:
-            msg_dict['display_name'] = msg_dict['member_name']
-        messages_list.append(msg_dict)
+    messages_list = [format_family_chat_message(db, msg) for msg in messages]
     
     db.close()
     
@@ -2375,18 +2459,61 @@ def family_chat_send():
         return redirect(url_for('family_chat'))
     
     db = get_db()
-    db.execute("""
+    cursor = db.execute("""
         INSERT INTO family_chat (member_id, message)
         VALUES (?, ?)
     """, (get_member_id(), message))
+    message_id = cursor.lastrowid
     db.commit()
     notify_mentions(message, get_member_id(), 'Family Chat')
+    sent_message = get_family_chat_message(db, message_id)
     db.close()
     
     message_snippet = message[:100]
     send_push_notification('family_chat', 'New Family Chat', message_snippet, exclude_user_id=get_member_id())
+
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return jsonify(success=True, message=sent_message)
     
     return redirect(url_for('family_chat'))
+
+@app.route('/family/chat/messages')
+def family_chat_messages():
+    """Return recent family chat messages for live updates."""
+    if not require_family_access():
+        return jsonify(success=False, error='Login required'), 401
+
+    after_id = request.args.get('after_id', '0')
+    try:
+        after_id = int(after_id)
+    except ValueError:
+        after_id = 0
+
+    db = get_db()
+    if after_id > 0:
+        rows = db.execute("""
+            SELECT fc.id, fc.member_id, fc.message, fc.created_at, m.name as member_name, m.role, m.linked_member_id
+            FROM family_chat fc
+            LEFT JOIN members m ON fc.member_id = m.id
+            WHERE fc.id > ?
+            ORDER BY fc.id ASC
+            LIMIT 100
+        """, (after_id,)).fetchall()
+    else:
+        rows = db.execute("""
+            SELECT * FROM (
+                SELECT fc.id, fc.member_id, fc.message, fc.created_at, m.name as member_name, m.role, m.linked_member_id
+                FROM family_chat fc
+                LEFT JOIN members m ON fc.member_id = m.id
+                ORDER BY fc.id DESC
+                LIMIT 50
+            )
+            ORDER BY id ASC
+        """).fetchall()
+
+    messages = [format_family_chat_message(db, row) for row in rows]
+    db.close()
+    return jsonify(success=True, messages=messages)
 
 
 @app.route('/admin')
@@ -3320,10 +3447,10 @@ def members_events_detail(event_id):
     
     # Fetch all messages with member names and timestamps
     messages = db.execute(
-        "SELECT m.name, em.message, em.created_at FROM event_messages em JOIN members m ON em.member_id=m.id WHERE em.event_id=? ORDER BY em.created_at ASC",
+        "SELECT em.id, em.event_id, em.member_id, em.message, em.created_at, m.name FROM event_messages em JOIN members m ON em.member_id=m.id WHERE em.event_id=? ORDER BY em.id ASC",
         (event_id,)
     ).fetchall()
-    messages_list = [dict(m) for m in messages]
+    messages_list = [format_event_message(m) for m in messages]
     
     # Check if current user is board member
     is_board = session.get('role') in ('board_member', 'admin', 'super_admin')
@@ -3361,15 +3488,45 @@ def members_events_post_message(event_id):
         return redirect(url_for('members_events'))
     
     # Insert message
-    db.execute(
+    cursor = db.execute(
         "INSERT INTO event_messages (event_id, member_id, message) VALUES (?, ?, ?)",
         (event_id, get_member_id(), message)
     )
+    message_id = cursor.lastrowid
     db.commit()
+    new_message = get_event_message(db, message_id)
     db.close()
+
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return jsonify(success=True, message=new_message)
     
     flash('Message posted!', 'success')
     return redirect(url_for('members_events_detail', event_id=event_id))
+
+@app.route('/members/events/<int:event_id>/messages')
+def members_event_messages(event_id):
+    """Return newer event discussion messages for live updates."""
+    if not require_login():
+        return jsonify(success=False, error='Login required'), 401
+
+    after_id = request.args.get('after_id', '0')
+    try:
+        after_id = int(after_id)
+    except ValueError:
+        after_id = 0
+
+    db = get_db()
+    rows = db.execute("""
+        SELECT em.id, em.event_id, em.member_id, em.message, em.created_at, m.name
+        FROM event_messages em
+        JOIN members m ON em.member_id = m.id
+        WHERE em.event_id = ? AND em.id > ?
+        ORDER BY em.id ASC
+        LIMIT 100
+    """, (event_id, after_id)).fetchall()
+    messages = [format_event_message(row) for row in rows]
+    db.close()
+    return jsonify(success=True, messages=messages)
 
 @app.route('/members/events/<int:event_id>/edit-note', methods=['POST'])
 def members_events_edit_note(event_id):
@@ -3574,16 +3731,19 @@ def members_chat():
         return redirect(url_for('login'))
     
     db = get_db()
-    # Fetch last 50 messages with member names
+    # Fetch the newest 50 messages, then display them oldest-to-newest.
     messages = db.execute("""
-        SELECT cm.*, m.name as member_name
-        FROM chat_messages cm
-        LEFT JOIN members m ON cm.member_id = m.id
-        ORDER BY cm.created_at ASC
-        LIMIT 50
+        SELECT * FROM (
+            SELECT cm.*, m.name as member_name
+            FROM chat_messages cm
+            LEFT JOIN members m ON cm.member_id = m.id
+            ORDER BY cm.id DESC
+            LIMIT 50
+        )
+        ORDER BY id ASC
     """).fetchall()
     
-    messages_list = [dict(m) for m in messages]
+    messages_list = [format_member_chat_message(m) for m in messages]
     db.close()
     
     return render_template('chat.html',
@@ -3603,18 +3763,61 @@ def members_chat_send():
         return redirect(url_for('members_chat'))
     
     db = get_db()
-    db.execute("""
+    cursor = db.execute("""
         INSERT INTO chat_messages (member_id, message)
         VALUES (?, ?)
     """, (get_member_id(), message))
+    message_id = cursor.lastrowid
     db.commit()
     notify_mentions(message, get_member_id(), 'Members Chat')
+    sent_message = get_member_chat_message(db, message_id)
     db.close()
     
     message_snippet = message[:100]
     send_push_notification('member_chat', 'New Member Chat', message_snippet, exclude_user_id=get_member_id())
+
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return jsonify(success=True, message=sent_message)
     
     return redirect(url_for('members_chat'))
+
+@app.route('/members/chat/messages')
+def members_chat_messages():
+    """Return recent member chat messages for live updates."""
+    if not require_login():
+        return jsonify(success=False, error='Login required'), 401
+
+    after_id = request.args.get('after_id', '0')
+    try:
+        after_id = int(after_id)
+    except ValueError:
+        after_id = 0
+
+    db = get_db()
+    if after_id > 0:
+        rows = db.execute("""
+            SELECT cm.*, m.name as member_name
+            FROM chat_messages cm
+            LEFT JOIN members m ON cm.member_id = m.id
+            WHERE cm.id > ?
+            ORDER BY cm.id ASC
+            LIMIT 100
+        """, (after_id,)).fetchall()
+    else:
+        rows = db.execute("""
+            SELECT * FROM (
+                SELECT cm.*, m.name as member_name
+                FROM chat_messages cm
+                LEFT JOIN members m ON cm.member_id = m.id
+                ORDER BY cm.id DESC
+                LIMIT 50
+            )
+            ORDER BY id ASC
+        """).fetchall()
+
+    messages = [format_member_chat_message(row) for row in rows]
+    db.close()
+    return jsonify(success=True, messages=messages)
 
 # ========== MEMBER PROFILE ==========
 
@@ -4049,10 +4252,11 @@ def add_discussion_comment(post_id):
                 pass
     
     # Insert comment
-    db.execute("""
+    cursor = db.execute("""
         INSERT INTO discussion_comments (post_id, author_id, body, image_filename)
         VALUES (?, ?, ?, ?)
     """, (post_id, get_member_id(), body, image_filename))
+    comment_id = cursor.lastrowid
     db.commit()
     notify_mentions(body, get_member_id(), 'Family Discussion')
     
@@ -4062,10 +4266,43 @@ def add_discussion_comment(post_id):
         commenter = session.get('username', 'Someone')
         send_push_to_user(post_row['author_id'], '💬 New Reply', f"{commenter} replied to your post: {post_row['title'][:50]}")
     
+    new_comment = get_family_discussion_comment(db, comment_id)
     db.close()
+
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return jsonify(success=True, comment=new_comment)
     
     flash('Comment added!', 'success')
     return redirect(url_for('view_discussion_post', post_id=post_id))
+
+@app.route('/family/discussions/post/<int:post_id>/comments')
+def family_discussion_comments(post_id):
+    """Return newer family discussion comments for live replies."""
+    if not require_family_access():
+        return jsonify(success=False, error='Login required'), 401
+
+    after_id = request.args.get('after_id', '0')
+    try:
+        after_id = int(after_id)
+    except ValueError:
+        after_id = 0
+
+    db = get_db()
+    rows = db.execute("""
+        SELECT dc.*, m.name as author_name, m.profile_photo, m.id as author_id,
+               (SELECT COUNT(*) FROM discussion_reactions WHERE comment_id = dc.id AND reaction_type = 'like') as like_count,
+               (SELECT COUNT(*) FROM discussion_reactions WHERE comment_id = dc.id AND reaction_type = 'heart') as heart_count,
+               (SELECT COUNT(*) FROM discussion_reactions WHERE comment_id = dc.id AND member_id = ? AND reaction_type = 'like') as user_liked,
+               (SELECT COUNT(*) FROM discussion_reactions WHERE comment_id = dc.id AND member_id = ? AND reaction_type = 'heart') as user_hearted
+        FROM discussion_comments dc
+        LEFT JOIN members m ON dc.author_id = m.id
+        WHERE dc.post_id = ? AND dc.hidden = 0 AND dc.id > ?
+        ORDER BY dc.id ASC
+        LIMIT 100
+    """, (get_member_id(), get_member_id(), post_id, after_id)).fetchall()
+    comments = [format_discussion_comment(row) for row in rows]
+    db.close()
+    return jsonify(success=True, comments=comments)
 
 @app.route('/family/discussions/react', methods=['POST'])
 def toggle_reaction():
@@ -4347,10 +4584,11 @@ def add_member_discussion_comment(post_id):
         return redirect(url_for('view_member_discussion', post_id=post_id))
     from datetime import datetime
     db = get_db()
-    db.execute(
+    cursor = db.execute(
         "INSERT INTO discussion_comments (post_id, author_id, body, created_at) VALUES (?, ?, ?, ?)",
         (post_id, session['user_id'], body, datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
     )
+    comment_id = cursor.lastrowid
     db.commit()
     notify_mentions(body, session['user_id'], 'Members Discussion')
     
@@ -4360,8 +4598,38 @@ def add_member_discussion_comment(post_id):
         commenter = session.get('username', 'Someone')
         send_push_to_user(post['author_id'], '💬 New Reply', f"{commenter} replied to your post: {post['title'][:50]}")
     
+    new_comment = get_member_discussion_comment(db, comment_id)
     db.close()
+
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return jsonify(success=True, comment=new_comment)
+
     return redirect(url_for('view_member_discussion', post_id=post_id))
+
+@app.route('/members/discussions/post/<int:post_id>/comments')
+def member_discussion_comments(post_id):
+    """Return newer member discussion comments for live replies."""
+    if not session.get('user_id'):
+        return jsonify(success=False, error='Login required'), 401
+
+    after_id = request.args.get('after_id', '0')
+    try:
+        after_id = int(after_id)
+    except ValueError:
+        after_id = 0
+
+    db = get_db()
+    rows = db.execute("""
+        SELECT dc.*, m.name as author_name, m.profile_photo as author_photo, m.id as author_id
+        FROM discussion_comments dc
+        LEFT JOIN members m ON dc.author_id = m.id
+        WHERE dc.post_id = ? AND dc.hidden = 0 AND dc.id > ?
+        ORDER BY dc.id ASC
+        LIMIT 100
+    """, (post_id, after_id)).fetchall()
+    comments = [format_discussion_comment(row) for row in rows]
+    db.close()
+    return jsonify(success=True, comments=comments)
 
 
 # ========== Background Task: Check Expiring Posts ==========

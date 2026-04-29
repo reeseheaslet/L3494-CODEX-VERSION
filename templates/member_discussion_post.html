@@ -38,14 +38,15 @@
         
         <!-- Comments Section Heading -->
         <h2 class="font-heading font-bold text-navy text-lg mb-4">
-            Replies ({{ comments|length }})
+            Replies (<span id="reply-count">{{ comments|length }}</span>)
         </h2>
         
         <!-- Comments -->
+        <div id="discussion-comments" data-comments-url="/members/discussions/post/{{ post.id }}/comments">
         {% if comments %}
-            <div class="space-y-4 mb-8">
+            <div class="space-y-4 mb-8 discussion-comment-list">
                 {% for comment in comments %}
-                <div class="bg-gray-50 border-l-4 border-fire rounded-lg p-4">
+                <div class="bg-gray-50 border-l-4 border-fire rounded-lg p-4 discussion-comment" data-comment-id="{{ comment.id }}">
                     <div class="flex items-center justify-between mb-2">
                         <span class="font-semibold text-gray-700">{{ comment.author_name or 'Anonymous' }}</span>
                         <span class="text-gray-500 text-sm">{{ comment.created_at | friendly_time }}</span>
@@ -55,19 +56,20 @@
                 {% endfor %}
             </div>
         {% else %}
-            <div class="bg-white border border-gray-200 rounded-lg p-6 mb-8 text-center">
+            <div class="bg-white border border-gray-200 rounded-lg p-6 mb-8 text-center empty-comments-message">
                 <p class="text-gray-500">No replies yet — be the first!</p>
             </div>
         {% endif %}
+        </div>
         
         <!-- Reply Form -->
         <div class="bg-white border border-gray-200 rounded-lg shadow-sm p-6">
             <h3 class="font-heading font-bold text-navy text-base mb-4">Post a Reply</h3>
-            <form method="POST" action="/members/discussions/post/{{ post.id }}/comment" class="space-y-4">
+            <form method="POST" action="/members/discussions/post/{{ post.id }}/comment" class="space-y-4" id="discussion-comment-form">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 
                 <div>
-                    <textarea name="body" required rows="4" maxlength="5000" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-fire" placeholder="Write your reply..."></textarea>
+                    <textarea name="body" id="discussion-comment-input" required rows="4" maxlength="5000" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-fire" placeholder="Write your reply..."></textarea>
                 </div>
                 
                 <div>
@@ -76,6 +78,7 @@
                     </button>
                 </div>
             </form>
+            <p id="discussion-live-status" class="text-xs text-gray-500 mt-3">Live replies on</p>
         </div>
         
         <!-- Back Link -->
@@ -86,5 +89,124 @@
         </div>
     </div>
 </section>
+
+<script>
+const commentsRoot = document.getElementById('discussion-comments');
+const commentForm = document.getElementById('discussion-comment-form');
+const commentInput = document.getElementById('discussion-comment-input');
+const replyCount = document.getElementById('reply-count');
+const liveStatus = document.getElementById('discussion-live-status');
+let lastCommentId = 0;
+let loadingComments = false;
+
+function escapeHtml(value) {
+    const div = document.createElement('div');
+    div.textContent = value || '';
+    return div.innerHTML;
+}
+
+function highlightMentions(value) {
+    return escapeHtml(value).replace(/@(\w+)/g, '<span class="mention-tag">@$1</span>');
+}
+
+function ensureCommentList() {
+    if (!commentsRoot) return null;
+    let list = commentsRoot.querySelector('.discussion-comment-list');
+    if (!list) {
+        const empty = commentsRoot.querySelector('.empty-comments-message');
+        if (empty) empty.remove();
+        list = document.createElement('div');
+        list.className = 'space-y-4 mb-8 discussion-comment-list';
+        commentsRoot.appendChild(list);
+    }
+    return list;
+}
+
+function updateLastCommentId() {
+    if (!commentsRoot) return;
+    commentsRoot.querySelectorAll('[data-comment-id]').forEach(function(comment) {
+        lastCommentId = Math.max(lastCommentId, Number(comment.dataset.commentId || 0));
+    });
+}
+
+function setReplyCount() {
+    if (replyCount && commentsRoot) {
+        replyCount.textContent = commentsRoot.querySelectorAll('[data-comment-id]').length;
+    }
+}
+
+function appendComment(comment) {
+    if (!commentsRoot || !comment || !comment.id || commentsRoot.querySelector('[data-comment-id="' + comment.id + '"]')) return;
+    const list = ensureCommentList();
+    if (!list) return;
+    const card = document.createElement('div');
+    card.className = 'bg-gray-50 border-l-4 border-fire rounded-lg p-4 discussion-comment';
+    card.dataset.commentId = comment.id;
+    card.innerHTML = `
+        <div class="flex items-center justify-between mb-2">
+            <span class="font-semibold text-gray-700">${escapeHtml(comment.author_name || 'Anonymous')}</span>
+            <span class="text-gray-500 text-sm">${escapeHtml(comment.friendly_time || comment.created_at || '')}</span>
+        </div>
+        <p class="text-gray-600 whitespace-pre-wrap">${highlightMentions(comment.body || '')}</p>
+    `;
+    list.appendChild(card);
+    lastCommentId = Math.max(lastCommentId, Number(comment.id));
+    setReplyCount();
+}
+
+async function loadNewComments() {
+    if (!commentsRoot || loadingComments) return;
+    loadingComments = true;
+    try {
+        const response = await fetch(commentsRoot.dataset.commentsUrl + '?after_id=' + lastCommentId, {
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        });
+        if (!response.ok) throw new Error('Unable to load comments');
+        const data = await response.json();
+        if (data.success) {
+            data.comments.forEach(appendComment);
+            if (liveStatus) liveStatus.textContent = 'Live replies on';
+        }
+    } catch (error) {
+        if (liveStatus) liveStatus.textContent = 'Live replies paused. We will retry automatically.';
+    } finally {
+        loadingComments = false;
+    }
+}
+
+if (commentsRoot) {
+    updateLastCommentId();
+    setInterval(loadNewComments, 5000);
+    document.addEventListener('visibilitychange', function() {
+        if (!document.hidden) loadNewComments();
+    });
+}
+
+if (commentForm && commentInput) {
+    commentForm.addEventListener('submit', async function(event) {
+        event.preventDefault();
+        if (!commentInput.value.trim()) return;
+        const submitButton = commentForm.querySelector('button[type="submit"]');
+        if (submitButton) submitButton.disabled = true;
+        try {
+            const response = await fetch(commentForm.action, {
+                method: 'POST',
+                body: new FormData(commentForm),
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            });
+            const data = await response.json();
+            if (!response.ok || !data.success) throw new Error('Comment failed');
+            appendComment(data.comment);
+            commentInput.value = '';
+            commentInput.focus();
+            if (liveStatus) liveStatus.textContent = 'Reply posted';
+        } catch (error) {
+            if (liveStatus) liveStatus.textContent = 'Reply did not post. Please try again.';
+        } finally {
+            if (submitButton) submitButton.disabled = false;
+        }
+    });
+}
+</script>
 
 {% endblock %}

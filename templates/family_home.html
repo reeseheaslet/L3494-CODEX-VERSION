@@ -6,29 +6,7 @@
 {% set months = {'01':'Jan','02':'Feb','03':'Mar','04':'Apr','05':'May','06':'Jun','07':'Jul','08':'Aug','09':'Sep','10':'Oct','11':'Nov','12':'Dec'} %}
 
 <section class="app-shell family-shell">
-    <header class="app-topbar">
-        <a href="/" class="app-brand" aria-label="Local 3494 home">
-            <span class="app-brand__mark">3494</span>
-            <span>
-                <span class="app-brand__overline">Davis Professional Firefighters</span>
-                <span class="app-brand__name">Local 3494</span>
-            </span>
-        </a>
-        <div class="app-topbar__actions">
-            <a href="/family/roster" class="app-avatar" title="Directory">{{ username[0] if username else '?' }}</a>
-        </div>
-    </header>
-
     <main class="app-main">
-        <div class="mode-switch" aria-label="Portal mode">
-            {% if role != 'family' %}
-            <a href="/members" class="mode-switch__item">Member</a>
-            {% else %}
-            <span class="mode-switch__item is-muted">Member</span>
-            {% endif %}
-            <a href="/family" class="mode-switch__item is-active">Family</a>
-        </div>
-
         <div class="app-heading">
             <div>
                 <p class="app-kicker">Welcome back, {{ username }}</p>
@@ -36,6 +14,18 @@
             </div>
             <a href="/family/events" class="portal-button portal-button--primary">Post</a>
         </div>
+
+        <section class="connection-panel" aria-label="Family connection hub">
+            <div>
+                <p class="portal-eyebrow">Connection Hub</p>
+                <h2>One place for families and members to stay close.</h2>
+                <p>Share updates, coordinate meals or childcare, ask local questions, and keep everyone in the loop around union events.</p>
+            </div>
+            <div class="connection-actions">
+                <a href="/family/chat">Open chat</a>
+                <a href="/family/discussions">Start a discussion</a>
+            </div>
+        </section>
 
         <section class="next-card">
             <div class="next-card__content">
@@ -68,12 +58,12 @@
             <a href="/family/events" class="portal-tile">
                 <span class="tile-icon tile-icon--red"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 2v4"/><path d="M16 2v4"/><path d="M3 10h18"/><rect x="3" y="4" width="18" height="18" rx="2"/></svg></span>
                 <strong>Events</strong>
-                <span>Signups and gatherings</span>
+                <span>Family gatherings and support</span>
             </a>
             <a href="/family/chat" class="portal-tile">
                 <span class="tile-icon tile-icon--gold"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4Z"/></svg></span>
                 <strong>Chat</strong>
-                <span>Family updates</span>
+                <span>Spouses, families, and members</span>
             </a>
             <a href="/family/photos" class="portal-tile">
                 <span class="tile-icon tile-icon--blue"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="m21 15-5-5L5 21"/><circle cx="8.5" cy="8.5" r="1.5"/></svg></span>
@@ -83,12 +73,12 @@
             <a href="/family/roster" class="portal-tile">
                 <span class="tile-icon tile-icon--slate"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-8 0v2"/><circle cx="12" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span>
                 <strong>Directory</strong>
-                <span>Families and shifts</span>
+                <span>Families, shifts, and contacts</span>
             </a>
             <a href="/family/discussions" class="portal-tile">
                 <span class="tile-icon tile-icon--green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 8h10"/><path d="M7 12h6"/><path d="M21 12c0 4-4 7-9 7a10 10 0 0 1-4-.8L3 20l1.8-4A7.5 7.5 0 0 1 3 12c0-4 4-7 9-7s9 3 9 7Z"/></svg></span>
                 <strong>Discussions</strong>
-                <span>Recommendations</span>
+                <span>Recommendations and questions</span>
             </a>
             <a href="/family/peer-support" class="portal-tile">
                 <span class="tile-icon tile-icon--purple"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 1 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8Z"/></svg></span>

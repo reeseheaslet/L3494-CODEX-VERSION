@@ -19,30 +19,7 @@
 {% set months = {'01':'Jan','02':'Feb','03':'Mar','04':'Apr','05':'May','06':'Jun','07':'Jul','08':'Aug','09':'Sep','10':'Oct','11':'Nov','12':'Dec'} %}
 
 <section class="app-shell member-shell">
-    <header class="app-topbar">
-        <a href="/" class="app-brand" aria-label="Local 3494 home">
-            <span class="app-brand__mark">3494</span>
-            <span>
-                <span class="app-brand__overline">Davis Professional Firefighters</span>
-                <span class="app-brand__name">Local 3494</span>
-            </span>
-        </a>
-        <div class="app-topbar__actions">
-            {% if role in ['admin', 'super_admin'] %}
-            <a href="/admin" class="icon-button" title="Admin">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 15.5A3.5 3.5 0 1 0 12 8a3.5 3.5 0 0 0 0 7.5Z"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.04.04a2 2 0 1 1-2.83 2.83l-.04-.04A1.7 1.7 0 0 0 15 19.4a1.7 1.7 0 0 0-1 .6V20a2 2 0 1 1-4 0v-.06a1.7 1.7 0 0 0-1-.6 1.7 1.7 0 0 0-1.88.34l-.04.04a2 2 0 1 1-2.83-2.83l.04-.04A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-.6-1H4a2 2 0 1 1 0-4h.06a1.7 1.7 0 0 0 .6-1 1.7 1.7 0 0 0-.34-1.88l-.04-.04A2 2 0 1 1 7.11 4.25l.04.04A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1-.6V4a2 2 0 1 1 4 0v.06a1.7 1.7 0 0 0 1 .6 1.7 1.7 0 0 0 1.88-.34l.04-.04a2 2 0 1 1 2.83 2.83l-.04.04A1.7 1.7 0 0 0 19.4 9c.22.35.42.68.6 1H20a2 2 0 1 1 0 4h-.06a1.7 1.7 0 0 0-.54 1Z"/></svg>
-            </a>
-            {% endif %}
-            <a href="/members/profile" class="app-avatar" title="Profile">{{ username[0] if username else '?' }}</a>
-        </div>
-    </header>
-
     <main class="app-main">
-        <div class="mode-switch" aria-label="Portal mode">
-            <a href="/members" class="mode-switch__item is-active">Member</a>
-            <a href="/family" class="mode-switch__item">Family</a>
-        </div>
-
         <div class="app-heading">
             <div>
                 <p class="app-kicker">Good to see you, {{ username }}</p>
@@ -74,6 +51,18 @@
                 <div><strong>{{ upcoming_events|length }}</strong><span>Upcoming</span></div>
                 <div><strong>Member</strong><span>Mode</span></div>
                 <div><strong>{{ role|replace('_', ' ')|title }}</strong><span>Access</span></div>
+            </div>
+        </section>
+
+        <section class="connection-panel connection-panel--member" aria-label="Family connection">
+            <div>
+                <p class="portal-eyebrow">Family Connection</p>
+                <h2>Invite family and stay involved in the family side.</h2>
+                <p>Members can add family accounts, join family conversations, and help keep shared events coordinated without mixing family-only access into member tools.</p>
+            </div>
+            <div class="connection-actions">
+                <a href="/members/family">Manage family</a>
+                <a href="/family">Open family home</a>
             </div>
         </section>
 
