@@ -490,14 +490,6 @@
             </div>
             
             <div>
-                <label class="block text-xs font-semibold text-gray-600 uppercase mb-2">Type</label>
-                <select name="event_type" id="modal-type" class="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-fire/30">
-                    <option value="member">Members Only</option>
-                    <option value="public">Public</option>
-                </select>
-            </div>
-            
-            <div>
                 <label class="block text-xs font-semibold text-gray-600 uppercase mb-2">Visibility Targets</label>
                 <div class="space-y-2">
                     <label class="flex items-center gap-2">
@@ -555,13 +547,6 @@
             <div>
                 <label class="block text-xs font-semibold text-gray-600 uppercase mb-2">Description</label>
                 <textarea name="description" rows="3" class="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-fire/30"></textarea>
-            </div>
-            <div>
-                <label class="block text-xs font-semibold text-gray-600 uppercase mb-2">Type</label>
-                <select name="event_type" class="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-fire/30">
-                    <option value="member">Members Only</option>
-                    <option value="public">Public</option>
-                </select>
             </div>
             <div>
                 <label class="block text-xs font-semibold text-gray-600 uppercase mb-2">Show On</label>
@@ -641,7 +626,6 @@
             document.getElementById('modal-time').value = eventData.event_time || '';
             document.getElementById('modal-location').value = eventData.location;
             document.getElementById('modal-description').value = eventData.description || '';
-            document.getElementById('modal-type').value = eventData.event_type;
             document.getElementById('modal-signup').checked = eventData.signup_enabled ? true : false;
             
             // Handle visibility checkboxes (comma-separated string)

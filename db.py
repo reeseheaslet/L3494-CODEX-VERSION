@@ -12,7 +12,7 @@ def get_db():
 
 def init_db():
     db = get_db()
-    
+
     # Create members table
     db.execute("""
         CREATE TABLE IF NOT EXISTS members (
@@ -131,6 +131,19 @@ def init_db():
         )
     """)
     
+    # Create event_declines table
+    db.execute("""
+        CREATE TABLE IF NOT EXISTS event_declines (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            event_id INTEGER NOT NULL,
+            member_id INTEGER NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(event_id, member_id),
+            FOREIGN KEY (event_id) REFERENCES events(id),
+            FOREIGN KEY (member_id) REFERENCES members(id)
+        )
+    """)
+
     # Try to add visibility column to events (Phase 4)
     try:
         db.execute("ALTER TABLE events ADD COLUMN visibility TEXT DEFAULT 'public_homepage,member_portal'")

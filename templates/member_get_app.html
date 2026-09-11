@@ -134,15 +134,7 @@
                                     Enable
                                 </button>
                             </div>
-                            <p id="permissionStatus" class="text-gray-500 text-sm">
-                                <script>
-                                    if (Notification && Notification.permission === 'granted') {
-                                        document.getElementById('permissionStatus').textContent = '✓ Notifications enabled';
-                                        document.getElementById('enableNotificationsBtn').style.display = 'none';
-                                        document.getElementById('enableNotificationsBtn').parentElement.textContent = '✓ Enabled';
-                                    }
-                                </script>
-                            </p>
+                            <div id="permissionStatus" class="text-gray-500 text-sm" role="status" aria-live="polite"></div>
                         </div>
 
                         <!-- Member Notifications -->

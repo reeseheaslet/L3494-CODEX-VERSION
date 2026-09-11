@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}Union Meeting Minutes · Local 3494{% endblock %}
+
+{% block content %}
+<section class="bg-navy py-12">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <h1 class="font-heading font-bold text-4xl text-white mb-2">Union Meeting Minutes</h1>
+        <p class="text-gray-300">General Membership Meeting records</p>
+    </div>
+</section>
+
+<div class="h-1 bg-gradient-to-r from-fire via-red-400 to-fire"></div>
+
+<section class="py-12 bg-gray-50 min-h-screen">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="mb-6">
+            <a href="{{ url_for('member_documents') }}" class="inline-flex items-center gap-1 text-gray-500 hover:text-fire text-sm font-medium transition">
+                ← Back to Documents
+            </a>
+        </div>
+
+        {% if documents %}
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {% for doc in documents %}
+            <article class="bg-white border border-gray-200 rounded-lg shadow-sm p-6 flex flex-col">
+                <div class="flex-1 mb-4">
+                    <a href="{{ doc.url }}" target="_blank" rel="noopener" download class="font-heading font-bold text-navy text-lg hover:text-fire transition hover:underline block mb-2">
+                        {{ doc.title }}
+                        <svg class="w-4 h-4 inline ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+                    </a>
+                    {% if doc.description %}<p class="text-gray-600 text-sm">{{ doc.description }}</p>{% endif %}
+                </div>
+                <div class="pt-4 border-t border-gray-100">
+                    <span class="text-gray-500 text-xs">📅 {{ doc.created_at | friendly_time }}</span>
+                </div>
+            </article>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="bg-white border border-gray-200 rounded-lg shadow-sm p-12 text-center">
+            <h2 class="font-heading font-bold text-navy text-lg mb-1">No Meeting Minutes Yet</h2>
+            <p class="text-gray-500">Meeting minutes will appear here when they are published.</p>
+        </div>
+        {% endif %}
+    </div>
+</section>
+{% endblock %}

@@ -105,21 +105,52 @@
                         </div>
                     </div>
 
-                    {% else %}
-                    <!-- Not Signed Up -->
-                    <form method="POST" action="/members/events/signup" class="space-y-3">
-                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                        <input type="hidden" name="event_id" value="{{ event.id }}">
-                        
-                        <div>
-                            <label class="block text-sm font-semibold text-navy mb-1">Optional Note</label>
-                            <textarea name="note" rows="2" placeholder="Any questions or special requests..." class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:border-fire focus:outline-none focus:ring-1 focus:ring-fire"></textarea>
+                    {% elif user_declined %}
+                    <!-- Can't Make It -->
+                    <div class="space-y-4">
+                        <!-- Status -->
+                        <div class="flex items-center gap-2 text-purple-600 font-semibold text-sm">
+                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/></path></svg>
+                            You can't make it to this event
                         </div>
 
-                        <button type="submit" class="w-full bg-fire hover:bg-fire-dark text-white font-semibold py-2 rounded transition">
-                            Sign Up for This Event
-                        </button>
-                    </form>
+                        <!-- Undo Can't Make It -->
+                        <div>
+                            <form method="POST" action="/members/events/{{ event.id }}/cant-make-it">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button type="submit" class="text-sm text-gray-500 hover:underline font-semibold">
+                                    Undo
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+
+                    {% else %}
+                    <!-- Not Signed Up -->
+                    <div class="space-y-3">
+                        <form method="POST" action="/members/events/signup">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <input type="hidden" name="event_id" value="{{ event.id }}">
+
+                            <div>
+                                <label class="block text-sm font-semibold text-navy mb-1">Optional Note</label>
+                                <textarea name="note" rows="2" placeholder="Any questions or special requests..." class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:border-fire focus:outline-none focus:ring-1 focus:ring-fire"></textarea>
+                            </div>
+
+                            <button type="submit" class="w-full bg-fire hover:bg-fire-dark text-white font-semibold py-2 rounded transition">
+                                Sign Up for This Event
+                            </button>
+                        </form>
+
+                        <div class="pt-2 border-t border-gray-100">
+                            <form method="POST" action="/members/events/{{ event.id }}/cant-make-it">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button type="submit" class="w-full bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2 rounded transition">
+                                    Can't Make It
+                                </button>
+                            </form>
+                        </div>
+                    </div>
                     {% endif %}
                 </div>
 
@@ -144,6 +175,19 @@
                     <p class="text-gray-500 text-sm text-center py-4">No one has signed up yet.</p>
                     {% endif %}
                 </div>
+
+                <!-- Declines List -->
+                {% if declines %}
+                <div class="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
+                    <h2 class="font-heading font-bold text-lg text-purple-600 mb-4">Can't Make It ({{ declines|length }})</h2>
+
+                    <div class="flex flex-wrap gap-2">
+                        {% for d in declines %}
+                        <span class="bg-purple-100 text-purple-700 px-3 py-1 rounded-full text-sm">{{ d }}</span>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
 
                 {% else %}
                 <!-- Signups Not Enabled -->

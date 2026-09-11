@@ -3,6 +3,10 @@
 
 {% block content %}
 
+<div class="relative">
+{% include '_store_coming_soon.html' %}
+<div inert class="pointer-events-none select-none" aria-disabled="true">
+
 <!-- Page Banner -->
 <section class="bg-navy text-white py-16 md:py-20">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -163,6 +167,8 @@
         </div>
     </div>
 </section>
+</div>
+</div>
 
 <script>
 // Order management

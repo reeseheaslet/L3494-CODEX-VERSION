@@ -3,12 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Local 3494 · Davis Professional Firefighters{% endblock %}</title>
+    <title>Local3494</title>
     <link rel="manifest" href="/static/manifest.json">
+    <link rel="icon" href="/static/icons/favicon.svg" type="image/svg+xml">
+    <link rel="icon" href="/static/icons/favicon-32x32.png" sizes="32x32" type="image/png">
+    <link rel="shortcut icon" href="/static/icons/favicon.ico">
     <link rel="apple-touch-icon" href="/static/icons/apple-touch-icon.png">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-title" content="Local3494">
-    <meta name="theme-color" content="#1e3a5c">
+    <meta name="theme-color" content="#c41230">
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
       tailwind.config = {
@@ -206,10 +209,27 @@
         </a>
         <div class="app-topbar__actions">
             {% if session.get('role') in ('admin', 'super_admin') %}
-            <a href="/admin" class="icon-button" title="Admin">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 15.5A3.5 3.5 0 1 0 12 8a3.5 3.5 0 0 0 0 7.5Z"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.04.04a2 2 0 1 1-2.83 2.83l-.04-.04A1.7 1.7 0 0 0 15 19.4a1.7 1.7 0 0 0-1 .6V20a2 2 0 1 1-4 0v-.06a1.7 1.7 0 0 0-1-.6 1.7 1.7 0 0 0-1.88.34l-.04.04a2 2 0 1 1-2.83-2.83l.04-.04A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-.6-1H4a2 2 0 1 1 0-4h.06a1.7 1.7 0 0 0 .6-1 1.7 1.7 0 0 0-.34-1.88l-.04-.04A2 2 0 1 1 7.11 4.25l.04.04A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1-.6V4a2 2 0 1 1 4 0v.06a1.7 1.7 0 0 0 1 .6 1.7 1.7 0 0 0 1.88-.34l.04-.04a2 2 0 1 1 2.83 2.83l-.04.04A1.7 1.7 0 0 0 19.4 9c.22.35.42.68.6 1H20a2 2 0 1 1 0 4h-.06a1.7 1.7 0 0 0-.54 1Z"/></svg>
+            <a href="/admin" class="flex items-center gap-2 px-4 py-2 rounded-xl bg-fire text-white text-sm font-semibold hover:bg-red-700 transition" title="Admin Dashboard">
+                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 15.5A3.5 3.5 0 1 0 12 8a3.5 3.5 0 0 0 0 7.5Z"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.04.04a2 2 0 1 1-2.83 2.83l-.04-.04A1.7 1.7 0 0 0 15 19.4a1.7 1.7 0 0 0-1 .6V20a2 2 0 1 1-4 0v-.06a1.7 1.7 0 0 0-1-.6 1.7 1.7 0 0 0-1.88.34l-.04.04a2 2 0 1 1-2.83-2.83l-.04-.04A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-.6-1H4a2 2 0 1 1 0-4h.06a1.7 1.7 0 0 0 .6-1 1.7 1.7 0 0 0-.34-1.88l-.04-.04A2 2 0 1 1 7.11 4.25l.04.04A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1-.6V4a2 2 0 1 1 4 0v.06a1.7 1.7 0 0 0 1 .6 1.7 1.7 0 0 0 1.88-.34l.04-.04a2 2 0 1 1 2.83 2.83l-.04.04A1.7 1.7 0 0 0 19.4 9c.22.35.42.68.6 1H20a2 2 0 1 1 0 4h-.06a1.7 1.7 0 0 0-.54 1Z"/></svg>
+                Admin Dashboard
             </a>
             {% endif %}
+            <!-- Notification Bell -->
+            <div class="relative" id="notif-bell-wrapper-portal">
+                <button id="notif-bell-btn-portal" class="icon-button relative" title="Notifications" aria-label="Notifications">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
+                    <span id="notif-badge-portal" class="hidden absolute -top-1 -right-1 bg-fire text-white text-xs font-bold rounded-full w-4 h-4 flex items-center justify-center leading-none"></span>
+                </button>
+                <div id="notif-dropdown-portal" class="hidden absolute right-0 mt-2 w-80 bg-white rounded-2xl shadow-xl border border-gray-200 z-50">
+                    <div class="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
+                        <span class="font-semibold text-gray-800 text-sm">Notifications</span>
+                        <button id="notif-mark-read-portal" class="text-xs text-navy hover:underline">Mark all read</button>
+                    </div>
+                    <div id="notif-list-portal" class="divide-y divide-gray-100 max-h-72 overflow-y-auto">
+                        <div class="px-4 py-3 text-sm text-gray-500 text-center">Loading...</div>
+                    </div>
+                </div>
+            </div>
             <a href="{% if request.path.startswith('/family') %}/family/roster{% else %}/members/profile{% endif %}" class="app-avatar" title="Profile">{{ session.get('username', '?')[0] if session.get('username') else '?' }}</a>
         </div>
     </header>
@@ -279,6 +299,7 @@
                 <a href="/members/discussions" class="px-5 py-3 text-sm font-semibold transition border-b-2 {% if request.path.startswith('/members/discussions') %}text-navy border-fire{% else %}text-gray-500 border-transparent hover:text-navy hover:border-gray-300{% endif %}">💬 Discussions</a>
                 <a href="/members/chat" class="px-5 py-3 text-sm font-semibold transition border-b-2 {% if request.path.startswith('/members/chat') %}text-navy border-fire{% else %}text-gray-500 border-transparent hover:text-navy hover:border-gray-300{% endif %}">💬 Chat</a>
                 <a href="/members/documents" class="px-5 py-3 text-sm font-semibold transition border-b-2 {% if request.path.startswith('/members/documents') %}text-navy border-fire{% else %}text-gray-500 border-transparent hover:text-navy hover:border-gray-300{% endif %}">📄 Documents</a>
+                <a href="/members/tools/timecard" class="px-5 py-3 text-sm font-semibold transition border-b-2 {% if request.path.startswith('/members/tools/timecard') %}text-navy border-fire{% else %}text-gray-500 border-transparent hover:text-navy hover:border-gray-300{% endif %}">✅ Timecards</a>
                 <a href="/members/profile" class="px-5 py-3 text-sm font-semibold transition border-b-2 {% if request.path.startswith('/members/profile') %}text-navy border-fire{% else %}text-gray-500 border-transparent hover:text-navy hover:border-gray-300{% endif %}">👤 Profile</a>
                 <a href="/members/get-the-app" class="px-5 py-3 text-sm font-semibold transition border-b-2 {% if request.path.startswith('/members/get-the-app') %}text-navy border-fire{% else %}text-gray-500 border-transparent hover:text-navy hover:border-gray-300{% endif %}">📱 Get the App — Notifications</a>
                 {% endif %}
@@ -420,21 +441,125 @@
       const messaging = firebase.messaging();
       const VAPID_KEY = 'BF7L_2mEllcUChbYYwM2XecbM-C_Tq1BaO4VsxS31_A9mAEUn_G7hFbD4QpKJYlF8w5O5Sv13gQXJy-42hZw8ps';
 
+      async function registerPushToken() {
+        const swReg = await navigator.serviceWorker.ready;
+        const token = await messaging.getToken({ vapidKey: VAPID_KEY, serviceWorkerRegistration: swReg });
+        if (!token) {
+          throw new Error('No push token returned');
+        }
+
+        const response = await fetch('/api/push/register', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json', 'X-CSRFToken': document.querySelector('meta[name=csrf-token]')?.content || ''},
+          body: JSON.stringify({ token })
+        });
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok || !payload.success) {
+          throw new Error(payload.error || `Push registration failed (${response.status})`);
+        }
+      }
+
+      function retryPushTokenRegistration(label) {
+        setTimeout(async function() {
+          try {
+            await registerPushToken();
+          } catch (err) {
+            console.log(label, err);
+          }
+        }, 5000);
+      }
+
+      function showBlockedNotificationInstructions(status, button) {
+        const ua = navigator.userAgent || '';
+        const isIOS = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+        const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+
+        if (status) {
+          if (isIOS) {
+            status.innerHTML = isStandalone
+              ? '<strong>Notifications are blocked in iPhone Settings.</strong><ol class="list-decimal ml-5 mt-2 space-y-1"><li>Open the iPhone <strong>Settings</strong> app.</li><li>Tap <strong>Notifications</strong>.</li><li>Select <strong>Local3494</strong>.</li><li>Turn on <strong>Allow Notifications</strong>, then return here.</li></ol>'
+              : '<strong>Notifications are blocked for this website.</strong><br>On iPhone, push notifications require the app to be added to the Home Screen. Open the installed app, then go to <strong>Settings → Notifications → Local3494</strong> and turn on <strong>Allow Notifications</strong>.';
+          } else {
+            status.innerHTML = '<strong>Notifications are blocked in your browser settings.</strong><br>Open this site\'s permissions (usually the lock or settings icon by the address), change <strong>Notifications</strong> to <strong>Allow</strong>, then reload this page.';
+          }
+        }
+        if (button) {
+          button.disabled = false;
+          button.textContent = 'Show Instructions';
+        }
+      }
+
       async function requestNotificationPermission() {
+        const status = document.getElementById('permissionStatus');
+        const button = document.getElementById('enableNotificationsBtn');
+
+        if (!('Notification' in window) || !('serviceWorker' in navigator)) {
+          if (status) {
+            status.innerHTML = '<strong>Push notifications are not supported here.</strong><br>Open the installed app, or use a current version of Safari, Chrome, or Edge.';
+          }
+          return;
+        }
+
+        // Browsers do not allow a site to re-open a permission prompt after the
+        // user has denied it. Give device-specific recovery steps instead of
+        // leaving the button looking broken.
+        if (Notification.permission === 'denied') {
+          showBlockedNotificationInstructions(status, button);
+          return;
+        }
+
         try {
+          if (button) {
+            button.disabled = true;
+            button.textContent = 'Enabling…';
+          }
           const permission = await Notification.requestPermission();
           if (permission === 'granted') {
-            const token = await messaging.getToken({ vapidKey: VAPID_KEY });
-            await fetch('/api/push/register', {
-              method: 'POST',
-              headers: {'Content-Type': 'application/json', 'X-CSRFToken': document.querySelector('meta[name=csrf-token]')?.content || ''},
-              body: JSON.stringify({ token })
-            });
+            await registerPushToken();
+            if (status) status.textContent = '✓ Notifications enabled';
+            if (button) button.style.display = 'none';
+          } else if (permission === 'denied') {
+            showBlockedNotificationInstructions(status, button);
+          } else {
+            if (status) status.textContent = 'Notification permission was not changed. Tap Enable when you are ready.';
+            if (button) {
+              button.disabled = false;
+              button.textContent = 'Enable';
+            }
           }
         } catch (err) {
           console.log('Notification setup:', err);
+          if (status) status.textContent = 'Notifications could not be enabled. Please try again.';
+          if (button) {
+            button.disabled = false;
+            button.textContent = 'Try Again';
+          }
+          retryPushTokenRegistration('Notification setup retry failed:');
         }
       }
+
+      function updateNotificationPermissionUI() {
+        const status = document.getElementById('permissionStatus');
+        const button = document.getElementById('enableNotificationsBtn');
+        if (!status || !button) return;
+
+        if (!('Notification' in window) || !('serviceWorker' in navigator)) {
+          status.textContent = 'Push notifications are not supported in this browser.';
+          button.textContent = 'Learn More';
+        } else if (Notification.permission === 'granted') {
+          status.textContent = '✓ Notifications enabled';
+          button.style.display = 'none';
+        } else if (Notification.permission === 'denied') {
+          status.textContent = 'Notifications are blocked. Tap for instructions.';
+          button.textContent = 'Fix Settings';
+        } else {
+          status.textContent = 'Tap Enable to receive push notifications.';
+          button.textContent = 'Enable';
+        }
+      }
+
+      document.addEventListener('DOMContentLoaded', updateNotificationPermissionUI);
+      window.addEventListener('pageshow', updateNotificationPermissionUI);
 
       // Register service worker
       if ('serviceWorker' in navigator) {
@@ -455,17 +580,10 @@
         // Permission already granted — silently refresh token in case SW update invalidated it
         setTimeout(async function() {
           try {
-            const swReg = await navigator.serviceWorker.ready;
-            const token = await messaging.getToken({ vapidKey: VAPID_KEY, serviceWorkerRegistration: swReg });
-            if (token) {
-              await fetch('/api/push/register', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json', 'X-CSRFToken': document.querySelector('meta[name=csrf-token]')?.content || ''},
-                body: JSON.stringify({ token })
-              });
-            }
+            await registerPushToken();
           } catch (err) {
             console.log('Token refresh error:', err);
+            retryPushTokenRegistration('Token refresh retry failed:');
           }
         }, 2000);
       }
@@ -515,7 +633,7 @@
                     return;
                 }
                 list.innerHTML = data.notifications.map(n => `
-                    <a href="${n.url || '#'}" class="block px-4 py-3 hover:bg-gray-50 transition ${n.is_read ? '' : 'bg-blue-50'}">
+                    <a href="${n.url || '#'}" data-notif-id="${n.id}" class="notif-item block px-4 py-3 hover:bg-gray-50 transition ${n.is_read ? '' : 'bg-blue-50'}">
                         <div class="flex items-start gap-2">
                             ${!n.is_read ? '<span class="mt-1.5 w-2 h-2 rounded-full bg-fire flex-shrink-0"></span>' : '<span class="mt-1.5 w-2 h-2 flex-shrink-0"></span>'}
                             <div class="flex-1 min-w-0">
@@ -526,6 +644,24 @@
                         </div>
                     </a>
                 `).join('');
+                // Mark individual notification as read on click
+                list.querySelectorAll('a.notif-item').forEach(function(el) {
+                    el.addEventListener('click', function(e) {
+                        const nid = this.dataset.notifId;
+                        const dest = this.href;
+                        if (!nid || !dest || dest === '#') return;
+                        e.preventDefault();
+                        const csrf = document.querySelector('meta[name="csrf-token"]');
+                        const headers = {'Content-Type': 'application/json'};
+                        if (csrf) headers['X-CSRFToken'] = csrf.content;
+                        fetch('/api/notifications/' + nid + '/read', {
+                            method: 'POST',
+                            headers: headers
+                        }).finally(function() {
+                            window.location.href = dest;
+                        });
+                    });
+                });
             }
 
             function loadNotifications() {
@@ -572,6 +708,10 @@
 
         initBell('notif-bell-btn', 'notif-dropdown', 'notif-badge', 'notif-list', 'notif-mark-read', 'notif-bell-wrapper');
         initBell('notif-bell-btn-mobile', 'notif-dropdown-mobile', 'notif-badge-mobile', 'notif-list-mobile', 'notif-mark-read-mobile', 'notif-bell-wrapper-mobile');
+        // Portal bell (member/family portal pages)
+        if (document.getElementById('notif-bell-btn-portal')) {
+            initBell('notif-bell-btn-portal', 'notif-dropdown-portal', 'notif-badge-portal', 'notif-list-portal', 'notif-mark-read-portal', 'notif-bell-wrapper-portal');
+        }
     })();
     </script>
 

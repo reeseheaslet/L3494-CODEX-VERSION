@@ -1,0 +1,208 @@
+{% extends "base.html" %}
+{% block title %}Timecard Checker · Local 3494{% endblock %}
+
+{% block head %}
+<style>
+    .timecard-results-shell {
+        position: relative;
+    }
+    .timecard-results-toolbar {
+        position: sticky;
+        top: 0;
+        z-index: 30;
+        padding: .75rem;
+        background: rgba(249, 250, 251, .96);
+        border-bottom: 1px solid #e5e7eb;
+        backdrop-filter: blur(6px);
+    }
+    .timecard-filter[aria-pressed="true"] {
+        color: #fff;
+        background: #1e3a5c;
+        border-color: #1e3a5c;
+    }
+    .timecard-table-wrap {
+        max-height: min(72vh, 56rem);
+        overflow: auto;
+        overscroll-behavior: contain;
+    }
+    .timecard-results-table {
+        min-width: 900px;
+    }
+    .timecard-results-table th,
+    .timecard-results-table td {
+        padding: .4rem .6rem;
+        line-height: 1.2;
+        white-space: nowrap;
+    }
+    .timecard-results-table thead th {
+        position: sticky;
+        top: 0;
+        z-index: 20;
+        background: #f3f4f6;
+    }
+    .timecard-results-table th:first-child,
+    .timecard-results-table td:first-child {
+        position: sticky;
+        left: 0;
+    }
+    .timecard-results-table th:first-child {
+        z-index: 25;
+        background: #f3f4f6;
+    }
+    .timecard-results-table td:first-child {
+        z-index: 10;
+        background: #fff;
+        box-shadow: 1px 0 0 #e5e7eb;
+    }
+    @media (min-width: 1024px) {
+        .timecard-results-shell {
+            left: 50%;
+            width: calc(100vw - 2rem);
+            max-width: 100rem;
+            transform: translateX(-50%);
+        }
+        .timecard-table-wrap {
+            max-height: calc(100vh - 12rem);
+            min-height: 30rem;
+        }
+    }
+    @media (max-width: 640px) {
+        .timecard-results-toolbar {
+            position: static;
+            padding: .75rem 0;
+        }
+        .timecard-table-wrap {
+            max-height: 65vh;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="bg-navy py-12">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <h1 class="font-heading font-bold text-4xl text-white mb-2">Timecard Checker</h1>
+        <p class="text-gray-300">Compare First Due and Executime exports for a pay period.</p>
+    </div>
+</section>
+<div class="h-1 bg-gradient-to-r from-fire via-red-400 to-fire"></div>
+
+<section class="py-12 bg-gray-50 min-h-screen">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <a href="{{ url_for('members') }}" class="inline-flex mb-6 text-gray-500 hover:text-fire text-sm font-medium">← Back to Member Portal</a>
+
+        <div class="bg-white border border-gray-200 rounded-lg shadow-sm p-6 mb-8">
+            <p class="text-sm text-gray-600 mb-6">Your CSV files are processed in memory for this comparison and are not saved by the website.</p>
+            <form method="POST" enctype="multipart/form-data" class="space-y-5">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    <div>
+                        <label for="executime_file" class="block text-sm font-semibold text-navy mb-1">Executime CSV</label>
+                        <input type="file" id="executime_file" name="executime_file" accept=".csv,text/csv" required class="w-full px-3 py-2 border border-gray-300 rounded-lg">
+                    </div>
+                    <div>
+                        <label for="firstdue_file" class="block text-sm font-semibold text-navy mb-1">First Due CSV</label>
+                        <input type="file" id="firstdue_file" name="firstdue_file" accept=".csv,text/csv" required class="w-full px-3 py-2 border border-gray-300 rounded-lg">
+                    </div>
+                    <div>
+                        <label for="pay_period_start" class="block text-sm font-semibold text-navy mb-1">Pay Period Start</label>
+                        <div class="flex gap-2">
+                            <input type="text" id="pay_period_start" name="pay_period_start" value="{{ pay_period_start }}" placeholder="MM/DD/YYYY" inputmode="numeric" autocomplete="off" required class="min-w-0 flex-1 px-3 py-2 border border-gray-300 rounded-lg">
+                            <label class="relative flex items-center justify-center w-11 border border-gray-300 rounded-lg bg-white cursor-pointer" title="Choose start date">
+                                <span aria-hidden="true">&#128197;</span>
+                                <span class="sr-only">Choose pay period start date</span>
+                                <input type="date" data-date-picker-for="pay_period_start" aria-label="Choose pay period start date" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer">
+                            </label>
+                        </div>
+                    </div>
+                    <div>
+                        <label for="pay_period_end" class="block text-sm font-semibold text-navy mb-1">Pay Period End</label>
+                        <div class="flex gap-2">
+                            <input type="text" id="pay_period_end" name="pay_period_end" value="{{ pay_period_end }}" placeholder="MM/DD/YYYY" inputmode="numeric" autocomplete="off" required class="min-w-0 flex-1 px-3 py-2 border border-gray-300 rounded-lg">
+                            <label class="relative flex items-center justify-center w-11 border border-gray-300 rounded-lg bg-white cursor-pointer" title="Choose end date">
+                                <span aria-hidden="true">&#128197;</span>
+                                <span class="sr-only">Choose pay period end date</span>
+                                <input type="date" data-date-picker-for="pay_period_end" aria-label="Choose pay period end date" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer">
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                <p class="text-xs text-gray-500">CSV files only, up to 5 MB each.</p>
+                <button type="submit" class="bg-fire hover:bg-fire-dark text-white font-semibold py-2 px-6 rounded transition">Run Comparison</button>
+            </form>
+        </div>
+
+        {% if error %}
+        <div role="alert" class="bg-red-50 border border-red-200 text-red-800 rounded-lg p-4 mb-8">{{ error }}</div>
+        {% endif %}
+
+        {% if results_rows %}
+        <div id="timecard-results" class="timecard-results-shell bg-white border border-gray-200 rounded-lg shadow-sm">
+            <div class="timecard-results-toolbar flex flex-wrap gap-2" aria-label="Result filters">
+                <button type="button" data-timecard-view="all" aria-pressed="true" class="timecard-filter px-4 py-2 bg-white border border-gray-300 rounded transition">All issues</button>
+                <button type="button" data-timecard-view="hours" aria-pressed="false" class="timecard-filter px-4 py-2 bg-white border border-gray-300 rounded transition">Hour mismatches</button>
+                <button type="button" data-timecard-view="signatures" aria-pressed="false" class="timecard-filter px-4 py-2 bg-white border border-gray-300 rounded transition">Signatures</button>
+                <button type="button" data-timecard-view="hard" aria-pressed="false" class="timecard-filter px-4 py-2 bg-white border border-gray-300 rounded transition">Hard issues</button>
+            </div>
+            <div class="timecard-table-wrap">
+            <table id="timecard-results-table" class="timecard-results-table w-full text-xs border-collapse">
+                <thead>
+                    <tr>{% for col in results_rows[0].keys() %}<th class="border-b px-3 py-2 text-left">{{ col }}</th>{% endfor %}</tr>
+                </thead>
+                <tbody>
+                    {% for row in results_rows %}
+                    <tr data-mismatch="{{ row.IsMismatch }}" data-signature="{{ row.HasSignatureIssue }}" data-siglevel="{{ row.SignatureIssueLevel }}">
+                        {% for key, value in row.items() %}
+                        <td class="border-b px-3 py-2 {% if key == 'SignatureIssueLevel' and value == 'HARD' %}bg-red-100{% elif key == 'SignatureIssueLevel' and value == 'SOFT' %}bg-yellow-100{% endif %}">{{ value }}</td>
+                        {% endfor %}
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            </div>
+        </div>
+        {% elif submitted and not error %}
+        <div class="bg-green-50 border border-green-200 text-green-800 rounded-lg p-6">
+            <h2 class="font-heading font-bold text-lg mb-1">No issues found</h2>
+            <p>The two exports match for the selected pay period and required signatures are present.</p>
+        </div>
+        {% endif %}
+    </div>
+</section>
+
+<script>
+document.querySelectorAll('[data-date-picker-for]').forEach(function(picker) {
+    picker.addEventListener('change', function() {
+        if (!picker.value) return;
+        const target = document.getElementById(picker.dataset.datePickerFor);
+        const parts = picker.value.split('-');
+        target.value = parts[1] + '/' + parts[2] + '/' + parts[0];
+    });
+});
+
+function setTimecardView(view) {
+    const results = document.getElementById('timecard-results');
+    if (!results) return;
+
+    results.querySelectorAll('[data-timecard-view]').forEach(function(button) {
+        button.setAttribute('aria-pressed', String(button.dataset.timecardView === view));
+    });
+
+    results.querySelectorAll('#timecard-results-table tbody tr').forEach(function(row) {
+        const mismatch = row.dataset.mismatch.toLowerCase() === 'true';
+        const signature = row.dataset.signature.toLowerCase() === 'true';
+        const signatureLevel = row.dataset.siglevel.toUpperCase();
+        const hidden = (view === 'hours' && !mismatch) ||
+            (view === 'signatures' && !signature) ||
+            (view === 'hard' && !(mismatch || signatureLevel === 'HARD'));
+        row.hidden = hidden;
+    });
+}
+
+document.querySelectorAll('[data-timecard-view]').forEach(function(button) {
+    button.addEventListener('click', function() {
+        setTimecardView(button.dataset.timecardView);
+    });
+});
+</script>
+{% endblock %}

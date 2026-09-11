@@ -24,7 +24,7 @@
         <!-- Action Button -->
         <div class="mb-8">
             <button onclick="openNewAlbumModal()" class="bg-fire hover:bg-fire-dark text-white font-semibold px-6 py-2 rounded transition text-sm">
-                ➕ Request New Album
+                ➕ Create New Album
             </button>
         </div>
 
@@ -61,6 +61,14 @@
                     </p>
                 </div>
             </a>
+            {% if album.id != 1 and (session.get('role') in ['admin', 'super_admin'] or album.created_by == current_member_id) %}
+            <form method="POST" action="/family/photos/albums/{{ album.id }}/rename" class="mt-2 flex gap-2">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input name="name" value="{{ album.name }}" required class="min-w-0 flex-1 border rounded px-2 py-1 text-sm"><button class="text-navy text-sm font-semibold">Rename</button>
+            </form>
+            <form method="POST" action="/family/photos/albums/{{ album.id }}/delete" onsubmit="return confirm('Warning: deleting this album will also permanently delete all photos in the album. Continue?');" class="mt-2">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="text-fire text-sm font-semibold">Delete album</button>
+            </form>
+            {% endif %}
             {% endfor %}
         </div>
         {% else %}
@@ -80,7 +88,7 @@
 <!-- New Album Request Modal -->
 <div id="newAlbumModal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
     <div class="bg-white rounded-lg p-8 max-w-md w-full shadow-xl">
-        <h2 class="font-heading font-bold text-2xl text-navy mb-6">Request New Album</h2>
+        <h2 class="font-heading font-bold text-2xl text-navy mb-6">Create New Album</h2>
         
         <form method="POST" action="/family/photos/album/request" class="space-y-4">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -98,7 +106,7 @@
 
             <div class="flex gap-3 pt-4">
                 <button type="submit" class="flex-1 bg-fire hover:bg-fire-dark text-white font-semibold py-2 rounded transition text-sm">
-                    Submit Request
+                    Create Album
                 </button>
                 <button type="button" onclick="closeNewAlbumModal()" class="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold py-2 rounded transition text-sm">
                     Cancel

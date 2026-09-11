@@ -26,3 +26,8 @@ PHASE_3_SUMMARY.md
 # Firebase service account (secret — upload to PA manually)
 firebase-service-account.json
 firebase_config.md
+
+# Local deployment backups and runtime/user-uploaded content
+migration-backups/
+static/images/
+uploads/

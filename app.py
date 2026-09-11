@@ -1,8 +1,10 @@
 import os
 import json
 import secrets
+import uuid
 import smtplib
 import threading
+import time
 import requests
 from datetime import datetime, timedelta, date
 from email.mime.text import MIMEText
@@ -12,6 +14,7 @@ from flask import Flask, render_template, request, redirect, url_for, session, f
 from flask_wtf.csrf import CSRFProtect
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
+from urllib.parse import urlparse
 from db import get_db, init_db
 import firebase_admin
 from firebase_admin import credentials, messaging as fcm_messaging
@@ -66,7 +69,7 @@ def inject_next_meeting():
     except Exception:
         return {'next_gm_meeting': None}
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
-app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=30)
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=365)
 
 # Email configuration — Gmail SMTP
 SMTP_HOST = os.environ.get('SMTP_HOST', 'smtp.gmail.com')
@@ -78,6 +81,12 @@ BASE_URL = os.environ.get('BASE_URL', 'https://local3494.pythonanywhere.com')
 
 AGENTS_STATUS_FILE = "/home/reese/.openclaw/workspace/agents_status.json"
 ALLOWED_EXTENSIONS = {'jpg', 'jpeg', 'png', 'gif'}
+DOCUMENT_EXTENSIONS = {'pdf', 'doc', 'docx', 'xls', 'xlsx', 'png', 'jpg', 'jpeg', 'gif'}
+DOCUMENT_MAX_BYTES = 10 * 1024 * 1024
+STORAGE_QUOTA_BYTES = int(os.environ.get('PYTHONANYWHERE_STORAGE_QUOTA_BYTES', 5 * 1024 * 1024 * 1024))
+STORAGE_WARNING_PERCENT = int(os.environ.get('STORAGE_WARNING_PERCENT', 80))
+STORAGE_STATUS_CACHE_SECONDS = int(os.environ.get('STORAGE_STATUS_CACHE_SECONDS', 300))
+_storage_status_cache = {'checked_at': 0, 'value': None}
 UPLOAD_FOLDER = os.path.join(os.path.dirname(__file__), 'static/images/family')
 MEMBER_UPLOAD_FOLDER = os.path.join(os.path.dirname(__file__), 'static/images/members')
 PROFILE_PHOTO_FOLDER = os.path.join(os.path.dirname(__file__), 'static/images/profiles')
@@ -86,15 +95,63 @@ DISCUSSION_ATTACHMENTS_FOLDER = os.path.join(os.path.dirname(__file__), 'static/
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
+def valid_http_url(value):
+    try:
+        parsed = urlparse(value)
+        return parsed.scheme in ('http', 'https') and bool(parsed.netloc)
+    except (TypeError, ValueError):
+        return False
+
+def directory_size_bytes(root_path):
+    """Return app-owned storage usage without following symlinks."""
+    total = 0
+    try:
+        for current_root, dirs, files in os.walk(root_path, followlinks=False):
+            dirs[:] = [name for name in dirs if name != '.git']
+            for filename in files:
+                path = os.path.join(current_root, filename)
+                try:
+                    if not os.path.islink(path):
+                        total += os.path.getsize(path)
+                except OSError:
+                    continue
+    except OSError:
+        return 0
+    return total
+
+def get_storage_status(root_path=None, quota_bytes=None, warning_percent=None):
+    """Build a non-blocking status based on files owned by this application."""
+    quota = quota_bytes if quota_bytes is not None else STORAGE_QUOTA_BYTES
+    threshold = warning_percent if warning_percent is not None else STORAGE_WARNING_PERCENT
+    used = directory_size_bytes(root_path or app.root_path)
+    percent = (used / quota * 100) if quota > 0 else 0
+    return {
+        'used_bytes': used,
+        'quota_bytes': quota,
+        'percent': percent,
+        'warning': percent >= threshold,
+        'threshold': threshold,
+        'quota_gb': quota / (1024 ** 3),
+    }
+
+def get_cached_storage_status():
+    """Avoid walking the application tree on every board-member page load."""
+    now = time.monotonic()
+    if (_storage_status_cache['value'] is None or
+            now - _storage_status_cache['checked_at'] >= STORAGE_STATUS_CACHE_SECONDS):
+        _storage_status_cache['value'] = get_storage_status()
+        _storage_status_cache['checked_at'] = now
+    return _storage_status_cache['value']
+
 def get_profile_photo(member_id):
     """Jinja2 helper to get profile photo URL for a member"""
     if not member_id:
         return '/static/images/default-avatar.png'
-    
+
     db = get_db()
     member = db.execute("SELECT profile_photo FROM members WHERE id = ?", (member_id,)).fetchone()
     db.close()
-    
+
     if member and member['profile_photo']:
         return f'/static/images/profiles/{member["profile_photo"]}'
     return '/static/images/default-avatar.png'
@@ -260,6 +317,18 @@ def require_member_access():
         return False
     return True
 
+def get_member_visible_event(db, event_id):
+    """Return an event only when it is intended for the member portal."""
+    return db.execute("""
+        SELECT * FROM events
+        WHERE id = ?
+          AND (visibility LIKE '%member_portal%' OR visibility LIKE '%public_homepage%')
+    """, (event_id,)).fetchone()
+
+# The checker shares the union member session and is unavailable to family accounts.
+from timecard_checker import create_timecard_blueprint
+app.register_blueprint(create_timecard_blueprint(require_member_access))
+
 @app.route('/')
 def index():
     db = get_db()
@@ -276,7 +345,7 @@ def index():
 def events():
     """Show public events on homepage (filtered by visibility)"""
     db = get_db()
-    
+
     # Get events visible on public homepage (LIKE for comma-separated values)
     today = datetime.now().strftime('%Y-%m-%d')
     public_events = db.execute("""
@@ -285,9 +354,9 @@ def events():
         AND event_date >= ?
         ORDER BY event_date ASC
     """, (today,)).fetchall()
-    
+
     db.close()
-    
+
     return render_template('events.html', events=[dict(e) for e in public_events])
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -494,14 +563,14 @@ def register():
             db.close()
             flash('An error occurred during registration. Please try again.', 'error')
             return render_template('register.html')
-    
+
     return render_template('register.html')
 
 @app.route('/members')
 def members():
     if not require_member_access():
         return redirect(url_for('family_home') if session.get('role') == 'family' else url_for('login'))
-    
+
     from datetime import date
     today = date.today().isoformat()
     db = get_db()
@@ -521,18 +590,266 @@ def members():
         ORDER BY event_date ASC
         LIMIT 120
     """, (today,)).fetchall()
+
+    # Build recent activity feed from multiple sources
+    recent_activity = []
+
+    # 1. New events created
+    try:
+        events_created = db.execute("""
+            SELECT e.id, e.title, e.created_at, m.name
+            FROM events e
+            LEFT JOIN members m ON e.created_by = m.id
+            WHERE (e.visibility LIKE '%member_portal%' OR e.visibility LIKE '%public_homepage%')
+            ORDER BY e.created_at DESC
+            LIMIT 100
+        """).fetchall()
+        for row in events_created:
+            recent_activity.append({
+                'label': f"📅 New event: {row['title']}",
+                'timestamp': row['created_at'],
+                'url': f"/members/events/{row['id']}"
+            })
+    except Exception:
+        pass
+
+    # 2. Event signups
+    try:
+        signups = db.execute("""
+            SELECT es.created_at, m.name, e.title, e.id
+            FROM event_signups es
+            LEFT JOIN members m ON es.member_id = m.id
+            LEFT JOIN events e ON es.event_id = e.id
+            WHERE (e.visibility LIKE '%member_portal%' OR e.visibility LIKE '%public_homepage%')
+            ORDER BY es.created_at DESC
+            LIMIT 100
+        """).fetchall()
+        for row in signups:
+            recent_activity.append({
+                'label': f"✅ {row['name']} signed up for {row['title']}",
+                'timestamp': row['created_at'],
+                'url': f"/members/events/{row['id']}"
+            })
+    except Exception:
+        pass
+
+    # 3. Event declines
+    try:
+        declines = db.execute("""
+            SELECT ed.created_at, m.name, e.title, e.id
+            FROM event_declines ed
+            LEFT JOIN members m ON ed.member_id = m.id
+            LEFT JOIN events e ON ed.event_id = e.id
+            WHERE (e.visibility LIKE '%member_portal%' OR e.visibility LIKE '%public_homepage%')
+            ORDER BY ed.created_at DESC
+            LIMIT 100
+        """).fetchall()
+        for row in declines:
+            recent_activity.append({
+                'label': f"❌ {row['name']} can't make {row['title']}",
+                'timestamp': row['created_at'],
+                'url': f"/members/events/{row['id']}"
+            })
+    except Exception:
+        pass
+
+    # 4. Chat messages
+    try:
+        messages = db.execute("""
+            SELECT cm.created_at, m.name, cm.message
+            FROM chat_messages cm
+            LEFT JOIN members m ON cm.member_id = m.id
+            ORDER BY cm.created_at DESC
+            LIMIT 100
+        """).fetchall()
+        for row in messages:
+            msg_preview = row['message'][:60] + '...' if len(row['message']) > 60 else row['message']
+            recent_activity.append({
+                'label': f"💬 {row['name']}: {msg_preview}",
+                'timestamp': row['created_at'],
+                'url': '/members/chat'
+            })
+    except Exception:
+        pass
+
+    # 5. Photos uploaded
+    try:
+        photos = db.execute("""
+            SELECT mp.created_at, m.name
+            FROM member_photos mp
+            LEFT JOIN members m ON mp.uploader_id = m.id
+            WHERE mp.status = 'approved'
+            ORDER BY mp.created_at DESC
+            LIMIT 100
+        """).fetchall()
+        for row in photos:
+            recent_activity.append({
+                'label': f"📷 {row['name']} uploaded a photo",
+                'timestamp': row['created_at'],
+                'url': '/members/photos'
+            })
+    except Exception:
+        pass
+
+    # 6. Documents added
+    try:
+        documents = db.execute("""
+            SELECT md.created_at, md.title, md.category, m.name
+            FROM member_documents md
+            LEFT JOIN members m ON md.added_by = m.id
+            ORDER BY md.created_at DESC
+            LIMIT 100
+        """).fetchall()
+        for row in documents:
+            recent_activity.append({
+                'label': f"📄 {row['title']} added to documents",
+                'timestamp': row['created_at'],
+                'url': ('/members/documents/union-meeting-minutes'
+                        if row['category'] == 'union_meeting_minutes'
+                        else '/members/documents')
+            })
+    except Exception:
+        pass
+
+    # 7. Discussion posts
+    try:
+        posts = db.execute("""
+            SELECT dp.id, dp.created_at, dp.title, m.name
+            FROM discussion_posts dp
+            LEFT JOIN members m ON dp.author_id = m.id
+            ORDER BY dp.created_at DESC
+            LIMIT 100
+        """).fetchall()
+        for row in posts:
+            title_preview = row['title'][:60] + '...' if len(row['title']) > 60 else row['title']
+            recent_activity.append({
+                'label': f"💬 {row['name']} posted: {title_preview}",
+                'timestamp': row['created_at'],
+                'url': f"/members/discussions/post/{row['id']}"
+            })
+    except Exception:
+        pass
+
+    # Sort by timestamp descending and take top 5
+    recent_activity.sort(key=lambda x: x['timestamp'] if x['timestamp'] else '', reverse=True)
+    recent_activity = recent_activity[:5]
+
     db.close()
-    
+
+    storage_status = None
+    if session.get('role') in ('board_member', 'admin', 'super_admin'):
+        storage_status = get_cached_storage_status()
+
     return render_template('members.html',
         logged_in=True,
         username=session.get('username', ''),
         role=session.get('role', 'member'),
         upcoming_events=[dict(e) for e in upcoming_events],
-        calendar_events=[dict(e) for e in calendar_events])
+        calendar_events=[dict(e) for e in calendar_events],
+        recent_activity=recent_activity,
+        storage_status=storage_status)
+
+@app.route('/members/useful-links')
+def member_useful_links():
+    if not require_member_access():
+        return redirect(url_for('family_home') if session.get('role') == 'family' else url_for('login'))
+
+    db = get_db()
+    useful_links = db.execute("SELECT * FROM useful_links ORDER BY created_at DESC, id DESC").fetchall()
+    db.close()
+    return render_template('member_useful_links.html', useful_links=[dict(row) for row in useful_links], current_member_id=get_member_id())
+
+@app.route('/members/useful-links/add', methods=['POST'])
+def member_useful_link_add():
+    if not require_member_access():
+        return redirect(url_for('login'))
+    title = request.form.get('title', '').strip()
+    url = request.form.get('url', '').strip()
+    description = request.form.get('description', '').strip()
+    if not title or len(title) > 150 or not valid_http_url(url):
+        flash('Enter a title and a valid http or https website address.', 'error')
+        return redirect(url_for('member_useful_links'))
+    db = get_db()
+    db.execute("INSERT INTO useful_links (title, url, description, added_by) VALUES (?, ?, ?, ?)",
+               (title, url, description[:500] or None, get_member_id()))
+    db.commit(); db.close()
+    flash('Website link added.', 'success')
+    return redirect(url_for('member_useful_links'))
+
+@app.route('/members/useful-links/<int:link_id>/edit', methods=['POST'])
+def member_useful_link_edit(link_id):
+    if not require_member_access():
+        return redirect(url_for('login'))
+    title = request.form.get('title', '').strip()
+    url = request.form.get('url', '').strip()
+    description = request.form.get('description', '').strip()
+    if not title or len(title) > 150 or not valid_http_url(url):
+        flash('Enter a title and a valid http or https website address.', 'error')
+        return redirect(url_for('member_useful_links'))
+    db = get_db(); row = db.execute("SELECT added_by FROM useful_links WHERE id=?", (link_id,)).fetchone()
+    if not row or not (is_admin() or row['added_by'] == get_member_id()):
+        db.close(); flash('You can only edit links you added.', 'error'); return redirect(url_for('member_useful_links'))
+    db.execute("UPDATE useful_links SET title=?, url=?, description=? WHERE id=?", (title, url, description[:500] or None, link_id))
+    db.commit(); db.close(); flash('Website link updated.', 'success')
+    return redirect(url_for('member_useful_links'))
+
+@app.route('/members/useful-links/<int:link_id>/delete', methods=['POST'])
+def member_useful_link_delete(link_id):
+    if not require_member_access():
+        return redirect(url_for('login'))
+    db = get_db(); row = db.execute("SELECT added_by FROM useful_links WHERE id=?", (link_id,)).fetchone()
+    if not row or not (is_admin() or row['added_by'] == get_member_id()):
+        db.close(); flash('You can only delete links you added.', 'error'); return redirect(url_for('member_useful_links'))
+    db.execute("DELETE FROM useful_links WHERE id=?", (link_id,)); db.commit(); db.close()
+    flash('Website link deleted.', 'success'); return redirect(url_for('member_useful_links'))
+
+@app.route('/members/activity')
+def member_activity():
+    if not require_member_access():
+        return redirect(url_for('login'))
+    db = get_db()
+    all_activity = []
+    try:
+        for row in db.execute("SELECT e.id, e.title, e.created_at FROM events e WHERE (e.visibility LIKE '%member_portal%' OR e.visibility LIKE '%public_homepage%') ORDER BY e.created_at DESC LIMIT 200").fetchall():
+            all_activity.append({'label': f"📅 New event: {row['title']}", 'timestamp': row['created_at'], 'url': f"/members/events/{row['id']}"})
+    except Exception: pass
+    try:
+        for row in db.execute("SELECT es.created_at, m.name, e.title, e.id FROM event_signups es LEFT JOIN members m ON es.member_id=m.id LEFT JOIN events e ON es.event_id=e.id WHERE (e.visibility LIKE '%member_portal%' OR e.visibility LIKE '%public_homepage%') ORDER BY es.created_at DESC LIMIT 200").fetchall():
+            all_activity.append({'label': f"✅ {row['name']} signed up for {row['title']}", 'timestamp': row['created_at'], 'url': f"/members/events/{row['id']}"})
+    except Exception: pass
+    try:
+        for row in db.execute("SELECT ed.created_at, m.name, e.title, e.id FROM event_declines ed LEFT JOIN members m ON ed.member_id=m.id LEFT JOIN events e ON ed.event_id=e.id WHERE (e.visibility LIKE '%member_portal%' OR e.visibility LIKE '%public_homepage%') ORDER BY ed.created_at DESC LIMIT 200").fetchall():
+            all_activity.append({'label': f"❌ {row['name']} can't make {row['title']}", 'timestamp': row['created_at'], 'url': f"/members/events/{row['id']}"})
+    except Exception: pass
+    try:
+        for row in db.execute("SELECT cm.created_at, m.name, cm.message FROM chat_messages cm LEFT JOIN members m ON cm.member_id=m.id ORDER BY cm.created_at DESC LIMIT 200").fetchall():
+            preview = row['message'][:60] + '...' if len(row['message']) > 60 else row['message']
+            all_activity.append({'label': f"💬 {row['name']}: {preview}", 'timestamp': row['created_at'], 'url': '/members/chat'})
+    except Exception: pass
+    try:
+        for row in db.execute("SELECT mp.created_at, m.name FROM member_photos mp LEFT JOIN members m ON mp.uploader_id=m.id WHERE mp.status='approved' ORDER BY mp.created_at DESC LIMIT 200").fetchall():
+            all_activity.append({'label': f"📷 {row['name']} uploaded a photo", 'timestamp': row['created_at'], 'url': '/members/photos'})
+    except Exception: pass
+    try:
+        for row in db.execute("SELECT md.created_at, md.title, md.category, m.name FROM member_documents md LEFT JOIN members m ON md.added_by=m.id ORDER BY md.created_at DESC LIMIT 200").fetchall():
+            document_url = ('/members/documents/union-meeting-minutes'
+                            if row['category'] == 'union_meeting_minutes'
+                            else '/members/documents')
+            all_activity.append({'label': f"📄 {row['title']} added to documents", 'timestamp': row['created_at'], 'url': document_url})
+    except Exception: pass
+    try:
+        for row in db.execute("SELECT dp.id, dp.created_at, dp.title, m.name FROM discussion_posts dp LEFT JOIN members m ON dp.author_id=m.id ORDER BY dp.created_at DESC LIMIT 200").fetchall():
+            title_preview = row['title'][:60] + '...' if len(row['title']) > 60 else row['title']
+            all_activity.append({'label': f"💬 {row['name']} posted: {title_preview}", 'timestamp': row['created_at'], 'url': f"/members/discussions/post/{row['id']}"})
+    except Exception: pass
+    db.close()
+    all_activity.sort(key=lambda x: x['timestamp'] if x['timestamp'] else '', reverse=True)
+    return render_template('member_activity.html', logged_in=True, username=session.get('username', ''), role=session.get('role', 'member'), all_activity=all_activity)
+
 
 @app.route('/about')
 def about():
-    return render_template('about.html') if os.path.exists(os.path.join(app.template_folder, 'about.html')) else render_template('index.html')
+    return render_template('about.html')
 
 @app.route('/contact', methods=['GET', 'POST'])
 def contact():
@@ -559,7 +876,7 @@ def contact():
         db.commit()
         db.close()
         return render_template('contact.html', success=True)
-    
+
     return render_template('contact.html')
 
 @app.route('/store')
@@ -570,7 +887,7 @@ def store():
     ).fetchall()
     db.close()
     items_list = [dict(item) for item in items]
-    
+
     # Parse JSON sizes for template
     for item in items_list:
         if item['sizes']:
@@ -580,7 +897,7 @@ def store():
                 item['sizes_list'] = []
         else:
             item['sizes_list'] = []
-    
+
     return render_template('store.html', items=items_list)
 
 @app.route('/store/order', methods=['POST'])
@@ -589,26 +906,26 @@ def store_order():
     email = request.form.get('email', '').strip()
     phone = request.form.get('phone', '').strip()
     payment_method = request.form.get('payment_method', '').strip()
-    
+
     items_json = request.form.get('items_json', '[]')
     try:
         items = json.loads(items_json)
     except:
         flash('Error processing order. Please try again.', 'error')
         return redirect(url_for('store'))
-    
+
     if not name or not email or not payment_method:
         flash('Please fill in all required fields.', 'error')
         return redirect(url_for('store'))
-    
+
     if not items:
         flash('Your order is empty.', 'error')
         return redirect(url_for('store'))
-    
+
     db = get_db()
     order_ids = []
     total = 0
-    
+
     for item in items:
         item_id = item.get('item_id')
         size = item.get('size')
@@ -634,7 +951,7 @@ def store_order():
         cursor = db.execute("SELECT last_insert_rowid()")
         order_id = cursor.fetchone()[0]
         order_ids.append(order_id)
-    
+
     db.close()
     
     if not order_ids:
@@ -694,13 +1011,21 @@ def shift_calendar():
         flash('Please log in to view the shift calendar.', 'error')
         return redirect(url_for('login'))
     
-    # Fetch public events from database
+    # Members see member-portal and public events; family accounts see public events only.
     db = get_db()
     today = datetime.now().strftime('%Y-%m-%d')
-    events = db.execute(
-        "SELECT * FROM events WHERE visibility LIKE '%public_homepage%' AND event_date >= ? ORDER BY event_date ASC",
-        (today,)
-    ).fetchall()
+    if session.get('role') == 'family':
+        events = db.execute(
+            "SELECT * FROM events WHERE visibility LIKE '%public_homepage%' AND event_date >= ? ORDER BY event_date ASC",
+            (today,)
+        ).fetchall()
+    else:
+        events = db.execute("""
+            SELECT * FROM events
+            WHERE (visibility LIKE '%member_portal%' OR visibility LIKE '%public_homepage%')
+              AND event_date >= ?
+            ORDER BY event_date ASC
+        """, (today,)).fetchall()
     db.close()
     
     # Convert to list of dicts for easier template access
@@ -885,13 +1210,13 @@ def members_family_invite():
         # Create new invitation
         token = secrets.token_urlsafe(32)
         expires_at = (datetime.now() + timedelta(days=7)).isoformat()
-        
+
         db.execute("""
             INSERT INTO family_invitations 
             (firefighter_id, invitee_name, invitee_email, token, status, expires_at)
             VALUES (?, ?, ?, ?, 'pending', ?)
         """, (member_id, invitee_name, invitee_email, token, expires_at))
-        
+
         # Mark that this firefighter has a pending invite
         db.execute("UPDATE members SET has_family_invite=1 WHERE id=?", (member_id,))
         db.commit()
@@ -1072,7 +1397,7 @@ def family_register(token):
         "SELECT * FROM members WHERE email=?",
         (invitation['invitee_email'],)
     ).fetchone()
-    
+
     if existing:
         db.close()
         flash('An account with this email already exists.', 'error')
@@ -1292,7 +1617,7 @@ def family_event_rsvp(event_id):
         "SELECT id FROM family_event_rsvps WHERE event_id = ? AND user_type = ? AND user_id = ?",
         (event_id, user_type, user_id)
     ).fetchone()
-    
+
     if existing:
         db.execute("DELETE FROM family_event_rsvps WHERE id = ?", (existing['id'],))
         action = 'removed'
@@ -1544,7 +1869,7 @@ def family_photos():
 
 @app.route('/family/photos/upload', methods=['POST'])
 def family_photos_upload():
-    """Upload a photo to family portal - requires admin approval before showing"""
+    """Upload and immediately publish a photo to the family portal."""
     if not require_family_access():
         return redirect(url_for('login'))
     
@@ -1587,7 +1912,7 @@ def family_photos_upload():
         db = get_db()
         db.execute("""
             INSERT INTO family_photos (uploader_id, filename, caption, album_id, status)
-            VALUES (?, ?, ?, ?, 'pending')
+            VALUES (?, ?, ?, ?, 'approved')
         """, (get_member_id(), filename, caption if caption else None, album_id))
         db.commit()
         
@@ -1598,12 +1923,12 @@ def family_photos_upload():
             <html>
             <body style="font-family: Arial, sans-serif; color: #333; line-height: 1.6;">
                 <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
-                    <h2 style="color: #B91C1C;">New Photo Upload Pending Approval</h2>
+                    <h2 style="color: #B91C1C;">New Family Photo Published</h2>
                     <p>Hello Admin,</p>
-                    <p><strong>{uploader_name}</strong> has uploaded a photo to the family portal that needs your approval.</p>
+                    <p><strong>{uploader_name}</strong> has published a photo to the family portal.</p>
                     <p style="margin-top: 20px;">
                         <a href="{BASE_URL}/admin?tab=photos" style="display: inline-block; background-color: #B91C1C; color: white; padding: 12px 30px; text-decoration: none; border-radius: 4px; font-weight: bold;">
-                            Review in Admin Panel
+                            View in Admin Panel
                         </a>
                     </p>
                     <p>—<br>Local 3494 Admin System</p>
@@ -1611,14 +1936,14 @@ def family_photos_upload():
             </body>
             </html>
             """
-            send_email('reese_joseph14@yahoo.com', 'New Photo Upload Pending Approval', admin_html)
+            send_email('reese_joseph14@yahoo.com', 'New Family Photo Published', admin_html)
         except Exception as e:
             # Don't block the upload if email fails
             print(f"[WARNING] Failed to send admin notification for photo upload: {str(e)}")
         
         db.close()
         
-        flash('Photo submitted! It will appear after admin approval.', 'success')
+        flash('Photo published!', 'success')
         return redirect(url_for('family_photos'))
     except Exception as e:
         flash('An error occurred while uploading the photo. Please try again.', 'error')
@@ -1634,7 +1959,7 @@ def family_photo_albums():
     
     # Get all approved albums with cover photo and count
     albums = db.execute("""
-        SELECT pa.id, pa.name, pa.description,
+        SELECT pa.id, pa.name, pa.description, pa.created_by,
                (SELECT filename FROM family_photos WHERE album_id = pa.id AND status = 'approved' ORDER BY created_at ASC LIMIT 1) as cover_photo,
                COUNT(fp.id) as photo_count
         FROM photo_albums pa
@@ -1648,6 +1973,7 @@ def family_photo_albums():
     
     return render_template('family_photo_albums.html',
         albums=[dict(a) for a in albums],
+        current_member_id=get_member_id(),
         username=session.get('username', ''),
         role=session.get('role', 'member'))
 
@@ -1667,7 +1993,7 @@ def request_new_album():
     db = get_db()
     db.execute("""
         INSERT INTO photo_albums (name, description, created_by, status)
-        VALUES (?, ?, ?, 'pending')
+        VALUES (?, ?, ?, 'approved')
     """, (name, description if description else None, get_member_id()))
     db.commit()
     
@@ -1678,12 +2004,12 @@ def request_new_album():
         <html>
         <body style="font-family: Arial, sans-serif; color: #333; line-height: 1.6;">
             <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
-                <h2 style="color: #B91C1C;">New Album Request Pending Approval</h2>
+                <h2 style="color: #B91C1C;">New Family Album Published</h2>
                 <p>Hello Admin,</p>
-                <p><strong>{requester_name}</strong> has requested a new photo album titled "<strong>{name}</strong>" that needs your approval.</p>
+                <p><strong>{requester_name}</strong> published a new photo album titled "<strong>{name}</strong>".</p>
                 <p style="margin-top: 20px;">
                     <a href="{BASE_URL}/admin?tab=album" style="display: inline-block; background-color: #B91C1C; color: white; padding: 12px 30px; text-decoration: none; border-radius: 4px; font-weight: bold;">
-                        Review in Admin Panel
+                        View in Admin Panel
                     </a>
                 </p>
                 <p>—<br>Local 3494 Admin System</p>
@@ -1691,14 +2017,14 @@ def request_new_album():
         </body>
         </html>
         """
-        send_email('reese_joseph14@yahoo.com', 'New Album Request Pending Approval', admin_html)
+        send_email('reese_joseph14@yahoo.com', 'New Family Album Published', admin_html)
     except Exception as e:
         # Don't block the request if email fails
         print(f"[WARNING] Failed to send admin notification for album request: {str(e)}")
     
     db.close()
     
-    flash('Album request submitted for admin approval.', 'success')
+    flash('Album created!', 'success')
     return redirect(url_for('family_photo_albums'))
 
 @app.route('/family/photos/<int:photo_id>/delete', methods=['POST'])
@@ -1872,7 +2198,7 @@ def member_photos_page():
 
 @app.route('/members/photos/upload', methods=['POST'])
 def member_photos_upload():
-    """Upload a photo to member portal - requires admin approval before showing"""
+    """Upload and immediately publish a photo to the member portal."""
     if not require_member_access():
         return redirect(url_for('login'))
     
@@ -1916,7 +2242,7 @@ def member_photos_upload():
         db = get_db()
         db.execute("""
             INSERT INTO member_photos (uploader_id, filename, caption, album_id, status)
-            VALUES (?, ?, ?, ?, 'pending')
+            VALUES (?, ?, ?, ?, 'approved')
         """, (get_member_id(), filename, caption if caption else None, album_id))
         db.commit()
         
@@ -1927,12 +2253,12 @@ def member_photos_upload():
             <html>
             <body style="font-family: Arial, sans-serif; color: #333; line-height: 1.6;">
                 <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
-                    <h2 style="color: #B91C1C;">New Photo Upload Pending Approval</h2>
+                    <h2 style="color: #B91C1C;">New Member Photo Published</h2>
                     <p>Hello Admin,</p>
-                    <p><strong>{uploader_name}</strong> has uploaded a photo to the member portal that needs your approval.</p>
+                    <p><strong>{uploader_name}</strong> has published a photo to the member portal.</p>
                     <p style="margin-top: 20px;">
                         <a href="{BASE_URL}/admin/member-photos/queue" style="display: inline-block; background-color: #B91C1C; color: white; padding: 12px 30px; text-decoration: none; border-radius: 4px; font-weight: bold;">
-                            Review in Admin Panel
+                            View in Admin Panel
                         </a>
                     </p>
                     <p>—<br>Local 3494 Admin System</p>
@@ -1940,14 +2266,14 @@ def member_photos_upload():
             </body>
             </html>
             """
-            send_email('reese_joseph14@yahoo.com', 'New Photo Upload Pending Approval', admin_html)
+            send_email('reese_joseph14@yahoo.com', 'New Member Photo Published', admin_html)
         except Exception as e:
             # Don't block the upload if email fails
             print(f"[WARNING] Failed to send admin notification for member photo upload: {str(e)}")
         
         db.close()
         
-        flash('Photo submitted! It will appear after admin approval.', 'success')
+        flash('Photo published!', 'success')
         return redirect(url_for('member_photos_page'))
     except Exception as e:
         flash('An error occurred while uploading the photo. Please try again.', 'error')
@@ -2035,7 +2361,7 @@ def member_photo_albums_page():
     
     # Get all approved albums with cover photo and count
     albums = db.execute("""
-        SELECT mpa.id, mpa.name, mpa.description,
+        SELECT mpa.id, mpa.name, mpa.description, mpa.created_by,
                (SELECT filename FROM member_photos WHERE album_id = mpa.id AND status = 'approved' ORDER BY created_at ASC LIMIT 1) as cover_photo,
                COUNT(mp.id) as photo_count
         FROM member_photo_albums mpa
@@ -2049,6 +2375,7 @@ def member_photo_albums_page():
     
     return render_template('member_photo_albums.html',
         albums=[dict(a) for a in albums],
+        current_member_id=get_member_id(),
         username=session.get('username', ''),
         role=session.get('role', 'member'))
 
@@ -2068,7 +2395,7 @@ def member_request_new_album():
     db = get_db()
     db.execute("""
         INSERT INTO member_photo_albums (name, description, created_by, status)
-        VALUES (?, ?, ?, 'pending')
+        VALUES (?, ?, ?, 'approved')
     """, (name, description if description else None, get_member_id()))
     db.commit()
     
@@ -2079,12 +2406,12 @@ def member_request_new_album():
         <html>
         <body style="font-family: Arial, sans-serif; color: #333; line-height: 1.6;">
             <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
-                <h2 style="color: #B91C1C;">New Album Request Pending Approval</h2>
+                <h2 style="color: #B91C1C;">New Member Album Published</h2>
                 <p>Hello Admin,</p>
-                <p><strong>{requester_name}</strong> has requested a new photo album titled "<strong>{name}</strong>" that needs your approval.</p>
+                <p><strong>{requester_name}</strong> published a new photo album titled "<strong>{name}</strong>".</p>
                 <p style="margin-top: 20px;">
                     <a href="{BASE_URL}/admin/member-photos/albums" style="display: inline-block; background-color: #B91C1C; color: white; padding: 12px 30px; text-decoration: none; border-radius: 4px; font-weight: bold;">
-                        Review in Admin Panel
+                        View in Admin Panel
                     </a>
                 </p>
                 <p>—<br>Local 3494 Admin System</p>
@@ -2092,15 +2419,69 @@ def member_request_new_album():
         </body>
         </html>
         """
-        send_email('reese_joseph14@yahoo.com', 'New Album Request Pending Approval', admin_html)
+        send_email('reese_joseph14@yahoo.com', 'New Member Album Published', admin_html)
     except Exception as e:
         # Don't block the request if email fails
         print(f"[WARNING] Failed to send admin notification for member album request: {str(e)}")
     
     db.close()
     
-    flash('Album request submitted for admin approval.', 'success')
+    flash('Album created!', 'success')
     return redirect(url_for('member_photos_page'))
+
+def _delete_album_with_photos(db, album_table, photo_table, upload_folder, album_id):
+    photos = db.execute(f"SELECT filename FROM {photo_table} WHERE album_id=?", (album_id,)).fetchall()
+    for photo in photos:
+        try: os.remove(os.path.join(upload_folder, photo['filename']))
+        except FileNotFoundError: pass
+    db.execute("DELETE FROM photo_comments WHERE photo_type=? AND photo_id IN (SELECT id FROM %s WHERE album_id=?)" % photo_table,
+               ('family' if photo_table == 'family_photos' else 'member', album_id))
+    db.execute(f"DELETE FROM {photo_table} WHERE album_id=?", (album_id,))
+    db.execute(f"DELETE FROM {album_table} WHERE id=?", (album_id,))
+
+@app.route('/members/photos/albums/<int:album_id>/delete', methods=['POST'])
+def member_album_delete(album_id):
+    if not require_member_access(): return redirect(url_for('login'))
+    db = get_db(); album = db.execute("SELECT created_by FROM member_photo_albums WHERE id=?", (album_id,)).fetchone()
+    if not album or not (is_admin() or album['created_by'] == get_member_id()):
+        db.close(); flash('You can only delete albums you created.', 'error'); return redirect(url_for('member_photo_albums_page'))
+    _delete_album_with_photos(db, 'member_photo_albums', 'member_photos', MEMBER_UPLOAD_FOLDER, album_id)
+    db.commit(); db.close(); flash('Album and all of its photos were deleted.', 'success')
+    return redirect(url_for('member_photo_albums_page'))
+
+@app.route('/members/photos/albums/<int:album_id>/rename', methods=['POST'])
+def member_album_rename(album_id):
+    if not require_member_access(): return redirect(url_for('login'))
+    name = request.form.get('name', '').strip()
+    if not name: flash('Album name is required.', 'error'); return redirect(url_for('member_photo_albums_page'))
+    db = get_db(); album = db.execute("SELECT created_by FROM member_photo_albums WHERE id=?", (album_id,)).fetchone()
+    if not album or not (is_admin() or album['created_by'] == get_member_id()):
+        db.close(); flash('You can only rename albums you created.', 'error'); return redirect(url_for('member_photo_albums_page'))
+    db.execute("UPDATE member_photo_albums SET name=? WHERE id=?", (name[:150], album_id)); db.commit(); db.close()
+    flash('Album renamed.', 'success'); return redirect(url_for('member_photo_albums_page'))
+
+@app.route('/family/photos/albums/<int:album_id>/delete', methods=['POST'])
+def family_album_delete(album_id):
+    if not require_family_access(): return redirect(url_for('login'))
+    if album_id == 1:
+        flash('General Photos cannot be deleted.', 'error'); return redirect(url_for('family_photo_albums'))
+    db = get_db(); album = db.execute("SELECT created_by FROM photo_albums WHERE id=?", (album_id,)).fetchone()
+    if not album or not (is_admin() or album['created_by'] == get_member_id()):
+        db.close(); flash('You can only delete albums you created.', 'error'); return redirect(url_for('family_photo_albums'))
+    _delete_album_with_photos(db, 'photo_albums', 'family_photos', UPLOAD_FOLDER, album_id)
+    db.commit(); db.close(); flash('Album and all of its photos were deleted.', 'success')
+    return redirect(url_for('family_photo_albums'))
+
+@app.route('/family/photos/albums/<int:album_id>/rename', methods=['POST'])
+def family_album_rename(album_id):
+    if not require_family_access(): return redirect(url_for('login'))
+    name = request.form.get('name', '').strip()
+    if not name: flash('Album name is required.', 'error'); return redirect(url_for('family_photo_albums'))
+    db = get_db(); album = db.execute("SELECT created_by FROM photo_albums WHERE id=?", (album_id,)).fetchone()
+    if not album or not (is_admin() or album['created_by'] == get_member_id()):
+        db.close(); flash('You can only rename albums you created.', 'error'); return redirect(url_for('family_photo_albums'))
+    db.execute("UPDATE photo_albums SET name=? WHERE id=?", (name[:150], album_id)); db.commit(); db.close()
+    flash('Album renamed.', 'success'); return redirect(url_for('family_photo_albums'))
 
 # Admin Member Photo Routes
 
@@ -2410,13 +2791,24 @@ def format_event_message(row):
     message['is_mine'] = message.get('member_id') == get_member_id()
     return message
 
+def event_message_schema(db):
+    """Return the event-message user/content columns used by this database."""
+    columns = {row['name'] for row in db.execute("PRAGMA table_info(event_messages)").fetchall()}
+    if {'author_id', 'content'} <= columns:
+        return 'author_id', 'content'
+    if {'member_id', 'message'} <= columns:
+        return 'member_id', 'message'
+    raise RuntimeError('event_messages table has no supported schema')
+
 def get_event_message(db, message_id):
+    author_column, content_column = event_message_schema(db)
     row = db.execute("""
-        SELECT em.id, em.event_id, em.member_id, em.message, em.created_at, m.name
+        SELECT em.id, em.event_id, em.{author_column} AS member_id,
+               em.{content_column} AS message, em.created_at, m.name
         FROM event_messages em
-        JOIN members m ON em.member_id = m.id
+        JOIN members m ON em.{author_column} = m.id
         WHERE em.id = ?
-    """, (message_id,)).fetchone()
+    """.format(author_column=author_column, content_column=content_column), (message_id,)).fetchone()
     return format_event_message(row) if row else None
 
 @app.route('/family/chat')
@@ -2808,7 +3200,6 @@ def admin_edit_event():
     location = request.form.get('location', '').strip()
     event_date = request.form.get('event_date', '').strip()
     event_time = request.form.get('event_time', '').strip()
-    event_type = request.form.get('event_type', 'member').strip()
     signup_enabled = 1 if request.form.get('signup_enabled') else 0
     
     # Build visibility string from checkboxes
@@ -2819,7 +3210,8 @@ def admin_edit_event():
         visibility_targets.append('member_portal')
     if request.form.get('visibility_family_section'):
         visibility_targets.append('family_section')
-    visibility = ','.join(visibility_targets) if visibility_targets else 'public_homepage,member_portal'
+    visibility = ','.join(visibility_targets) if visibility_targets else 'member_portal'
+    event_type = 'public' if 'public_homepage' in visibility_targets else 'member'
     
     if not all([event_id, title, event_date, location]):
         flash('Please fill in all required fields.', 'error')
@@ -2865,7 +3257,6 @@ def admin_create_event():
     location = request.form.get('location', '').strip()
     event_date = request.form.get('event_date', '').strip()
     event_time = request.form.get('event_time', '').strip()
-    event_type = request.form.get('event_type', 'member').strip()
     signup_enabled = 1 if request.form.get('signup_enabled') else 0
     
     visibility_targets = []
@@ -2876,6 +3267,7 @@ def admin_create_event():
     if request.form.get('visibility_family_section'):
         visibility_targets.append('family_section')
     visibility = ','.join(visibility_targets) if visibility_targets else 'member_portal'
+    event_type = 'public' if 'public_homepage' in visibility_targets else 'member'
     
     if not all([title, event_date, location]):
         flash('Please fill in all required fields.', 'error')
@@ -3085,7 +3477,7 @@ def admin_rename_album():
 @app.route('/admin/photos/album/delete', methods=['POST'])
 @require_role('admin', 'super_admin')
 def admin_delete_album():
-    """Delete a photo album - reassign photos to General Photos first"""
+    """Delete a photo album and every photo stored in it."""
     album_id = request.form.get('album_id', '').strip()
     
     if not album_id:
@@ -3105,15 +3497,11 @@ def admin_delete_album():
     
     db = get_db()
     
-    # Reassign all photos in this album to General Photos (id=1)
-    db.execute("UPDATE family_photos SET album_id = 1 WHERE album_id = ?", (album_id,))
-    
-    # Delete the album
-    db.execute("DELETE FROM photo_albums WHERE id = ?", (album_id,))
+    _delete_album_with_photos(db, 'photo_albums', 'family_photos', UPLOAD_FOLDER, album_id)
     db.commit()
     db.close()
     
-    flash('Album deleted. Photos have been moved to General Photos.', 'success')
+    flash('Album and all of its photos were deleted.', 'success')
     return redirect(url_for('admin_photo_albums'))
 
 # ========== PART A: Member Store ==========
@@ -3225,7 +3613,7 @@ def members_store_order():
 @app.route('/members/events')
 def members_events():
     """Show all events with signup functionality (filtered by visibility)"""
-    if not require_login():
+    if not require_member_access():
         return redirect(url_for('login'))
     
     db = get_db()
@@ -3276,6 +3664,23 @@ def members_events():
         ).fetchall()
         event_dict['signups_list'] = [dict(s)['name'] for s in signups]
         
+        # Check if current member declined
+        if include_user_status:
+            decline = db.execute(
+                "SELECT id FROM event_declines WHERE event_id=? AND member_id=?",
+                (event_dict['id'], member_id)
+            ).fetchone()
+            event_dict['user_declined'] = decline is not None
+        else:
+            event_dict['user_declined'] = False
+
+        # Get list of members who declined
+        declines = db.execute(
+            "SELECT m.name FROM event_declines ed JOIN members m ON ed.member_id=m.id WHERE ed.event_id=?",
+            (event_dict['id'],)
+        ).fetchall()
+        event_dict['declines_list'] = [dict(d)['name'] for d in declines]
+
         return event_dict
     
     # Enrich upcoming events
@@ -3294,30 +3699,22 @@ def members_events():
 
 @app.route('/members/events/create', methods=['GET'])
 def members_events_create_page():
-    """Show the create event form (board+ only)"""
-    if not require_login():
+    """Show the create event form to any approved, logged-in member."""
+    if not require_member_access():
         return redirect(url_for('login'))
-    if not is_board_member():
-        flash('Board member access required.', 'error')
-        return redirect(url_for('members_events'))
     return render_template('member_create_event.html', username=session.get('username', ''))
 
 @app.route('/members/events/create', methods=['POST'])
 def members_events_create():
-    """Create a new event (board+ only)"""
-    if not require_login():
+    """Create a new event for member, public, and/or family audiences."""
+    if not require_member_access():
         return redirect(url_for('login'))
-    
-    if not is_board_member():
-        flash('Only board members can create events.', 'error')
-        return redirect(url_for('members_events'))
     
     title = request.form.get('title', '').strip()
     description = request.form.get('description', '').strip()
     location = request.form.get('location', '').strip()
     event_date = request.form.get('event_date', '').strip()
     event_time = request.form.get('event_time', '').strip()
-    event_type = request.form.get('event_type', 'member').strip()
     signup_enabled = 1 if request.form.get('signup_enabled') else 0
     
     # Build visibility string
@@ -3329,11 +3726,12 @@ def members_events_create():
     if request.form.get('visibility_family_section'):
         visibility_targets.append('family_section')
     visibility = ','.join(visibility_targets) if visibility_targets else 'member_portal'
+    event_type = 'public' if 'public_homepage' in visibility_targets else 'member'
     
     if not all([title, event_date, location]):
         flash('Please fill in all required fields.', 'error')
         return redirect(url_for('members_events'))
-    
+
     db = get_db()
     db.execute("""
         INSERT INTO events (title, description, location, event_date, event_time, event_type, signup_enabled, visibility, created_by)
@@ -3350,18 +3748,23 @@ def members_events_create():
 @app.route('/members/events/signup', methods=['POST'])
 def members_events_signup():
     """Sign up for an event"""
-    if not require_login():
+    if not require_member_access():
         return redirect(url_for('login'))
     
     event_id = request.form.get('event_id', '').strip()
     note = request.form.get('note', '').strip()
     member_id = get_member_id()
-    
+
     if not event_id:
         flash('Invalid event.', 'error')
         return redirect(url_for('members_events'))
     
     db = get_db()
+
+    if not get_member_visible_event(db, event_id):
+        db.close()
+        flash('Event not found.', 'error')
+        return redirect(url_for('members_events'))
     
     # Check if already signed up
     existing = db.execute(
@@ -3388,7 +3791,7 @@ def members_events_signup():
 @app.route('/members/events/unsignup', methods=['POST'])
 def members_events_unsignup():
     """Cancel signup for an event"""
-    if not require_login():
+    if not require_member_access():
         return redirect(url_for('login'))
     
     event_id = request.form.get('event_id', '').strip()
@@ -3399,6 +3802,10 @@ def members_events_unsignup():
         return redirect(url_for('members_events'))
     
     db = get_db()
+    if not get_member_visible_event(db, event_id):
+        db.close()
+        flash('Event not found.', 'error')
+        return redirect(url_for('members_events'))
     db.execute(
         "DELETE FROM event_signups WHERE event_id=? AND member_id=?",
         (event_id, member_id)
@@ -3409,19 +3816,100 @@ def members_events_unsignup():
     flash('You have cancelled your signup.', 'success')
     return redirect(url_for('members_events_detail', event_id=event_id))
 
+@app.route('/members/events/cant-make-it', methods=['POST'])
+def members_events_cant_make_it():
+    """Toggle can't-make-it status for an event"""
+    if not require_member_access():
+        return redirect(url_for('login'))
+
+    event_id = request.form.get('event_id')
+    member_id = get_member_id()
+
+    if not event_id:
+        flash('Invalid event.', 'error')
+        return redirect(url_for('members_events'))
+
+    db = get_db()
+
+    if not get_member_visible_event(db, event_id):
+        db.close()
+        flash('Event not found.', 'error')
+        return redirect(url_for('members_events'))
+
+    # Remove any existing signup first (can't be both signed up and declined)
+    db.execute("DELETE FROM event_signups WHERE event_id=? AND member_id=?", (event_id, member_id))
+
+    # Toggle decline
+    existing = db.execute(
+        "SELECT id FROM event_declines WHERE event_id=? AND member_id=?",
+        (event_id, member_id)
+    ).fetchone()
+
+    if existing:
+        db.execute("DELETE FROM event_declines WHERE event_id=? AND member_id=?", (event_id, member_id))
+    else:
+        try:
+            db.execute(
+                "INSERT INTO event_declines (event_id, member_id) VALUES (?, ?)",
+                (event_id, member_id)
+            )
+        except Exception:
+            pass
+
+    db.commit()
+    db.close()
+
+    return redirect(url_for('members_events'))
+
+@app.route('/members/events/<int:event_id>/cant-make-it', methods=['POST'])
+def members_event_detail_cant_make_it(event_id):
+    """Toggle can't-make-it from the event detail page"""
+    if not require_member_access():
+        return redirect(url_for('login'))
+
+    member_id = get_member_id()
+    db = get_db()
+
+    if not get_member_visible_event(db, event_id):
+        db.close()
+        flash('Event not found.', 'error')
+        return redirect(url_for('members_events'))
+
+    # Remove any existing signup
+    db.execute("DELETE FROM event_signups WHERE event_id=? AND member_id=?", (event_id, member_id))
+
+    # Toggle decline
+    existing = db.execute(
+        "SELECT id FROM event_declines WHERE event_id=? AND member_id=?",
+        (event_id, member_id)
+    ).fetchone()
+
+    if existing:
+        db.execute("DELETE FROM event_declines WHERE event_id=? AND member_id=?", (event_id, member_id))
+    else:
+        try:
+            db.execute(
+                "INSERT INTO event_declines (event_id, member_id) VALUES (?, ?)",
+                (event_id, member_id)
+            )
+        except Exception:
+            pass
+
+    db.commit()
+    db.close()
+
+    return redirect(url_for('members_events_detail', event_id=event_id))
+
 @app.route('/members/events/<int:event_id>')
 def members_events_detail(event_id):
     """Show event detail page with signups and message board"""
-    if not require_login():
+    if not require_member_access():
         return redirect(url_for('login'))
     
     db = get_db()
     
     # Fetch event by ID
-    event = db.execute(
-        "SELECT * FROM events WHERE id=?",
-        (event_id,)
-    ).fetchone()
+    event = get_member_visible_event(db, event_id)
     
     if not event:
         flash('Event not found.', 'error')
@@ -3447,9 +3935,24 @@ def members_events_detail(event_id):
     ).fetchall()
     signups_list = [dict(s) for s in signups]
     
+    # Check if current member declined
+    user_decline = db.execute(
+        "SELECT id FROM event_declines WHERE event_id=? AND member_id=?",
+        (event_id, member_id)
+    ).fetchone()
+    event_dict['user_declined'] = user_decline is not None
+
+    # Fetch all declines with member names
+    declines = db.execute(
+        "SELECT m.name FROM event_declines ed JOIN members m ON ed.member_id=m.id WHERE ed.event_id=?",
+        (event_id,)
+    ).fetchall()
+    declines_list = [dict(d)['name'] for d in declines]
+
     # Fetch all messages with member names and timestamps
+    author_column, content_column = event_message_schema(db)
     messages = db.execute(
-        "SELECT em.id, em.event_id, em.member_id, em.message, em.created_at, m.name FROM event_messages em JOIN members m ON em.member_id=m.id WHERE em.event_id=? ORDER BY em.id ASC",
+        "SELECT em.id, em.event_id, em.{author_column} AS member_id, em.{content_column} AS message, em.created_at, m.name FROM event_messages em JOIN members m ON em.{author_column}=m.id WHERE em.event_id=? ORDER BY em.id ASC".format(author_column=author_column, content_column=content_column),
         (event_id,)
     ).fetchall()
     messages_list = [format_event_message(m) for m in messages]
@@ -3465,13 +3968,15 @@ def members_events_detail(event_id):
         messages=messages_list,
         user_signed_up=event_dict['user_signed_up'],
         user_note=event_dict['user_note'],
+        declines=declines_list,
+        user_declined=event_dict['user_declined'],
         is_board=is_board,
         username=get_member_name())
 
 @app.route('/members/events/<int:event_id>/message', methods=['POST'])
 def members_events_post_message(event_id):
     """Post a message to event discussion board"""
-    if not require_login():
+    if not require_member_access():
         return redirect(url_for('login'))
     
     message = request.form.get('message', '').strip()
@@ -3483,15 +3988,16 @@ def members_events_post_message(event_id):
     db = get_db()
     
     # Verify event exists
-    event = db.execute("SELECT id FROM events WHERE id=?", (event_id,)).fetchone()
+    event = get_member_visible_event(db, event_id)
     if not event:
         flash('Event not found.', 'error')
         db.close()
         return redirect(url_for('members_events'))
     
     # Insert message
+    author_column, content_column = event_message_schema(db)
     cursor = db.execute(
-        "INSERT INTO event_messages (event_id, member_id, message) VALUES (?, ?, ?)",
+        "INSERT INTO event_messages (event_id, {author_column}, {content_column}) VALUES (?, ?, ?)".format(author_column=author_column, content_column=content_column),
         (event_id, get_member_id(), message)
     )
     message_id = cursor.lastrowid
@@ -3508,7 +4014,7 @@ def members_events_post_message(event_id):
 @app.route('/members/events/<int:event_id>/messages')
 def members_event_messages(event_id):
     """Return newer event discussion messages for live updates."""
-    if not require_login():
+    if not require_member_access():
         return jsonify(success=False, error='Login required'), 401
 
     after_id = request.args.get('after_id', '0')
@@ -3518,14 +4024,19 @@ def members_event_messages(event_id):
         after_id = 0
 
     db = get_db()
+    if not get_member_visible_event(db, event_id):
+        db.close()
+        return jsonify(success=False, error='Event not found'), 404
+    author_column, content_column = event_message_schema(db)
     rows = db.execute("""
-        SELECT em.id, em.event_id, em.member_id, em.message, em.created_at, m.name
+        SELECT em.id, em.event_id, em.{author_column} AS member_id,
+               em.{content_column} AS message, em.created_at, m.name
         FROM event_messages em
-        JOIN members m ON em.member_id = m.id
+        JOIN members m ON em.{author_column} = m.id
         WHERE em.event_id = ? AND em.id > ?
         ORDER BY em.id ASC
         LIMIT 100
-    """, (event_id, after_id)).fetchall()
+    """.format(author_column=author_column, content_column=content_column), (event_id, after_id)).fetchall()
     messages = [format_event_message(row) for row in rows]
     db.close()
     return jsonify(success=True, messages=messages)
@@ -3533,7 +4044,7 @@ def members_event_messages(event_id):
 @app.route('/members/events/<int:event_id>/edit-note', methods=['POST'])
 def members_events_edit_note(event_id):
     """Update signup note for an event"""
-    if not require_login():
+    if not require_member_access():
         return redirect(url_for('login'))
     
     note = request.form.get('note', '').strip()
@@ -3542,7 +4053,7 @@ def members_events_edit_note(event_id):
     db = get_db()
     
     # Verify event exists
-    event = db.execute("SELECT id FROM events WHERE id=?", (event_id,)).fetchone()
+    event = get_member_visible_event(db, event_id)
     if not event:
         flash('Event not found.', 'error')
         db.close()
@@ -3573,7 +4084,7 @@ def members_events_edit_note(event_id):
 @app.route('/members/events/supply', methods=['POST'])
 def members_events_supply():
     """Add a supply item to an event (board+ only)"""
-    if not require_login():
+    if not require_member_access():
         return redirect(url_for('login'))
     
     if not is_board_member():
@@ -3588,7 +4099,7 @@ def members_events_supply():
         return redirect(url_for('members_events'))
     
     db = get_db()
-    event = db.execute("SELECT * FROM events WHERE id=?", (event_id,)).fetchone()
+    event = get_member_visible_event(db, event_id)
     
     if not event:
         flash('Event not found.', 'error')
@@ -3623,7 +4134,7 @@ def members_events_supply():
 @app.route('/members/meetings/create', methods=['GET'])
 def members_meetings_create_page():
     """Show the create general membership meeting form (all members can view, but only board can submit)"""
-    if not require_login():
+    if not require_member_access():
         return redirect(url_for('login'))
     return render_template('member_create_meeting.html',
         username=session.get('username', ''),
@@ -3632,7 +4143,7 @@ def members_meetings_create_page():
 @app.route('/members/meetings/create', methods=['POST'])
 def members_meetings_create():
     """Create a new general membership meeting (board+ only)"""
-    if not require_login():
+    if not require_member_access():
         return redirect(url_for('login'))
     
     if not is_board_member():
@@ -3665,7 +4176,7 @@ def members_meetings_create():
 @app.route('/members/chat')
 def members_chat():
     """Show member chat"""
-    if not require_login():
+    if not require_member_access():
         return redirect(url_for('login'))
     
     db = get_db()
@@ -3686,12 +4197,13 @@ def members_chat():
     
     return render_template('chat.html',
         messages=messages_list,
-        username=get_member_name())
+        username=get_member_name(),
+        can_manage_chat=is_admin())
 
 @app.route('/members/chat/send', methods=['POST'])
 def members_chat_send():
     """Send a chat message"""
-    if not require_login():
+    if not require_member_access():
         return redirect(url_for('login'))
     
     message = request.form.get('message', '').strip()
@@ -3719,10 +4231,37 @@ def members_chat_send():
     
     return redirect(url_for('members_chat'))
 
+@app.route('/members/chat/<int:message_id>/delete', methods=['POST'])
+@require_role('admin', 'super_admin')
+def members_chat_delete(message_id):
+    """Delete a member chat message (admin only)."""
+    db = get_db()
+    message = db.execute(
+        "SELECT id FROM chat_messages WHERE id = ?",
+        (message_id,)
+    ).fetchone()
+
+    if not message:
+        db.close()
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return jsonify(success=False, error='Message not found'), 404
+        flash('That chat message no longer exists.', 'error')
+        return redirect(url_for('members_chat'))
+
+    db.execute("DELETE FROM chat_messages WHERE id = ?", (message_id,))
+    db.commit()
+    db.close()
+
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return jsonify(success=True, message_id=message_id)
+
+    flash('Chat message deleted.', 'success')
+    return redirect(url_for('members_chat'))
+
 @app.route('/members/chat/messages')
 def members_chat_messages():
     """Return recent member chat messages for live updates."""
-    if not require_login():
+    if not require_member_access():
         return jsonify(success=False, error='Login required'), 401
 
     after_id = request.args.get('after_id', '0')
@@ -3817,6 +4356,7 @@ def member_documents():
     documents = db.execute("""
         SELECT id, title, description, url, added_by, created_at
         FROM member_documents
+        WHERE COALESCE(category, 'general') = 'general'
         ORDER BY created_at DESC
     """).fetchall()
     db.close()
@@ -3827,26 +4367,42 @@ def member_documents():
         role=session.get('role', 'member')
     )
 
+@app.route('/members/documents/union-meeting-minutes')
+def union_meeting_minutes():
+    """View union meeting minutes - members only."""
+    if not require_member_access():
+        return redirect(url_for('login'))
+
+    db = get_db()
+    documents = db.execute("""
+        SELECT id, title, description, url, added_by, created_at
+        FROM member_documents
+        WHERE category = 'union_meeting_minutes'
+        ORDER BY created_at DESC
+    """).fetchall()
+    db.close()
+
+    return render_template('union_meeting_minutes.html',
+        documents=[dict(d) for d in documents],
+        username=session.get('username', ''),
+        role=session.get('role', 'member')
+    )
+
 @app.route('/members/documents/add', methods=['POST'])
 def add_document():
-    """Add a new document - admin+ only"""
+    """Add a new document - all members"""
     if not require_member_access():
         return redirect(url_for('login'))
     
-    if session.get('role') not in ('admin', 'super_admin'):
-        flash('Only admins can add documents.', 'error')
-        return redirect(url_for('member_documents'))
-    
     title = request.form.get('title', '').strip()
     description = request.form.get('description', '').strip()
-    url = request.form.get('url', '').strip()
     file = request.files.get('file')
     
     if not title:
         flash('Title is required.', 'error')
         return redirect(url_for('member_documents'))
     
-    # Handle file upload or URL
+    # Documents are uploaded files only. Legacy external-URL records remain viewable.
     if file and file.filename:
         # File upload
         from werkzeug.utils import secure_filename
@@ -3857,6 +4413,15 @@ def add_document():
             flash('Invalid filename.', 'error')
             return redirect(url_for('member_documents'))
         
+        extension = filename.rsplit('.', 1)[-1].lower() if '.' in filename else ''
+        if extension not in DOCUMENT_EXTENSIONS:
+            flash('Unsupported file type. Use PDF, Word, Excel, or an image.', 'error')
+            return redirect(url_for('member_documents'))
+        file.stream.seek(0, os.SEEK_END); size = file.stream.tell(); file.stream.seek(0)
+        if size > DOCUMENT_MAX_BYTES:
+            flash('Document is too large. Maximum size is 10 MB.', 'error')
+            return redirect(url_for('member_documents'))
+        filename = f"{uuid.uuid4().hex}_{filename}"
         documents_dir = os.path.join(app.root_path, 'static', 'documents')
         os.makedirs(documents_dir, exist_ok=True)
         
@@ -3865,12 +4430,8 @@ def add_document():
         
         # Store the relative URL path
         url = f'/static/documents/{filename}'
-    elif url:
-        # External URL provided
-        pass
     else:
-        # Neither file nor URL provided
-        flash('Please upload a file or provide a URL.', 'error')
+        flash('Please upload a file.', 'error')
         return redirect(url_for('member_documents'))
     
     db = get_db()
@@ -3886,21 +4447,34 @@ def add_document():
 
 @app.route('/members/documents/<int:doc_id>/delete', methods=['POST'])
 def delete_document(doc_id):
-    """Delete a document - admin+ only"""
+    """Delete a document - owner or admin only."""
     if not require_member_access():
         return redirect(url_for('login'))
     
-    if session.get('role') not in ('admin', 'super_admin'):
-        flash('Only admins can delete documents.', 'error')
-        return redirect(url_for('member_documents'))
-    
     db = get_db()
+    document = db.execute("SELECT * FROM member_documents WHERE id=?", (doc_id,)).fetchone()
+    if not document or not (is_admin() or document['added_by'] == get_member_id()):
+        db.close(); flash('You can only delete documents you added.', 'error'); return redirect(url_for('member_documents'))
+    if document['url'].startswith('/static/documents/'):
+        try: os.remove(os.path.join(app.root_path, document['url'].lstrip('/')))
+        except FileNotFoundError: pass
     db.execute("DELETE FROM member_documents WHERE id = ?", (doc_id,))
     db.commit()
     db.close()
     
     flash('Document removed.', 'success')
     return redirect(url_for('member_documents'))
+
+@app.route('/members/documents/<int:doc_id>/edit', methods=['POST'])
+def edit_document(doc_id):
+    if not require_member_access(): return redirect(url_for('login'))
+    title = request.form.get('title', '').strip(); description = request.form.get('description', '').strip()
+    if not title: flash('Title is required.', 'error'); return redirect(url_for('member_documents'))
+    db = get_db(); document = db.execute("SELECT added_by FROM member_documents WHERE id=?", (doc_id,)).fetchone()
+    if not document or not (is_admin() or document['added_by'] == get_member_id()):
+        db.close(); flash('You can only edit documents you added.', 'error'); return redirect(url_for('member_documents'))
+    db.execute("UPDATE member_documents SET title=?, description=? WHERE id=?", (title, description or None, doc_id))
+    db.commit(); db.close(); flash('Document updated.', 'success'); return redirect(url_for('member_documents'))
 
 # ========== DISCUSSIONS BOARD ==========
 
@@ -4411,7 +4985,7 @@ def renew_discussion_post(post_id):
 
 @app.route('/members/discussions')
 def member_discussions():
-    if not session.get('user_id'):
+    if not require_member_access():
         return redirect(url_for('login'))
     db = get_db()
     categories = db.execute(
@@ -4437,7 +5011,7 @@ def member_discussions():
 
 @app.route('/members/discussions/new', methods=['GET', 'POST'])
 def new_member_discussion():
-    if not session.get('user_id'):
+    if not require_member_access():
         return redirect(url_for('login'))
     db = get_db()
     categories = db.execute(
@@ -4482,7 +5056,7 @@ def new_member_discussion():
 
 @app.route('/members/discussions/post/<int:post_id>')
 def view_member_discussion(post_id):
-    if not session.get('user_id'):
+    if not require_member_access():
         return redirect(url_for('login'))
     db = get_db()
     post = db.execute("""
@@ -4514,7 +5088,7 @@ def view_member_discussion(post_id):
 
 @app.route('/members/discussions/post/<int:post_id>/comment', methods=['POST'])
 def add_member_discussion_comment(post_id):
-    if not session.get('user_id'):
+    if not require_member_access():
         return redirect(url_for('login'))
     body = request.form.get('body', '').strip()
     if not body:
@@ -4547,7 +5121,7 @@ def add_member_discussion_comment(post_id):
 @app.route('/members/discussions/post/<int:post_id>/comments')
 def member_discussion_comments(post_id):
     """Return newer member discussion comments for live replies."""
-    if not session.get('user_id'):
+    if not require_member_access():
         return jsonify(success=False, error='Login required'), 401
 
     after_id = request.args.get('after_id', '0')
@@ -4651,6 +5225,22 @@ def run_migrations():
         # Column already exists, that's fine
         pass
     
+    # Create event_declines table if it doesn't exist
+    try:
+        db.execute("""
+            CREATE TABLE IF NOT EXISTS event_declines (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                event_id INTEGER NOT NULL,
+                member_id INTEGER NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(event_id, member_id)
+            )
+        """)
+        db.commit()
+    except Exception:
+        # Table already exists, that's fine
+        pass
+
     # Create event_messages table if it doesn't exist
     try:
         db.execute("""
@@ -4791,12 +5381,66 @@ def run_migrations():
                 description TEXT,
                 url TEXT NOT NULL,
                 added_by INTEGER,
+                category TEXT NOT NULL DEFAULT 'general',
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         """)
         db.commit()
     except Exception:
         pass
+
+    # Organize documents into member-facing sections. Existing rows remain general.
+    try:
+        db.execute("ALTER TABLE member_documents ADD COLUMN category TEXT NOT NULL DEFAULT 'general'")
+        db.commit()
+    except Exception:
+        db.rollback()  # Column already exists.
+
+    # Seed the first union meeting minutes document exactly once.
+    try:
+        minutes_url = '/static/documents/union-meeting-minutes/august-25-2026-general-membership-meeting-minutes.pdf'
+        db.execute("""
+            INSERT INTO member_documents (title, description, url, added_by, category)
+            SELECT ?, ?, ?, NULL, 'union_meeting_minutes'
+            WHERE NOT EXISTS (SELECT 1 FROM member_documents WHERE url = ?)
+        """, (
+            'August 25, 2026 General Membership Meeting Minutes',
+            'General Membership Meeting minutes from August 25, 2026.',
+            minutes_url,
+            minutes_url,
+        ))
+        db.commit()
+    except Exception:
+        db.rollback()
+
+    # Community-managed useful links. Existing production databases are migrated safely.
+    try:
+        db.execute("""
+            CREATE TABLE IF NOT EXISTS useful_links (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                title TEXT NOT NULL,
+                url TEXT NOT NULL,
+                description TEXT,
+                added_by INTEGER,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (added_by) REFERENCES members(id)
+            )
+        """)
+        db.execute("""
+            INSERT INTO useful_links (title, url, description, added_by)
+            SELECT ?, ?, ?, NULL
+            WHERE NOT EXISTS (SELECT 1 FROM useful_links WHERE url = ?)
+        """, ('CAPF Long-Term Disability Plans', 'https://capf.org/long-term-disability-plans/',
+              'Information about long-term disability plans from the California Association of Professional Firefighters.',
+              'https://capf.org/long-term-disability-plans/'))
+        # Approval is no longer part of photo/album publishing. Preserve rejected records.
+        db.execute("UPDATE family_photos SET status='approved' WHERE status='pending'")
+        db.execute("UPDATE photo_albums SET status='approved' WHERE status='pending'")
+        db.execute("UPDATE member_photos SET status='approved' WHERE status='pending'")
+        db.execute("UPDATE member_photo_albums SET status='approved' WHERE status='pending'")
+        db.commit()
+    except Exception:
+        db.rollback()
 
     # Seed initial document if table is empty
     try:
@@ -4909,8 +5553,12 @@ def send_push_notification(category, title, body, exclude_user_id=None):
             'family_announcements': '/family/announcements',
         }
         url = CATEGORY_URLS.get(category)
+        # Save one notification per user (not per token — users may have multiple devices)
+        notified_users = set()
         for row in rows:
-            save_notification(row['user_id'], title, body, category, url)
+            if row['user_id'] not in notified_users:
+                save_notification(row['user_id'], title, body, category, url)
+                notified_users.add(row['user_id'])
         
         # Send to each token individually (handle invalid tokens)
         invalid_tokens = []
@@ -5133,6 +5781,18 @@ def mark_notifications_read():
         return jsonify({'success': False}), 401
     db = get_db()
     db.execute("UPDATE notifications SET is_read = 1 WHERE user_id = ?", (session['user_id'],))
+    db.commit()
+    db.close()
+    return jsonify({'success': True})
+
+
+@app.route('/api/notifications/<int:notif_id>/read', methods=['POST'])
+def mark_notification_read(notif_id):
+    """Mark a single notification as read for current user."""
+    if 'user_id' not in session:
+        return jsonify({'success': False}), 401
+    db = get_db()
+    db.execute("UPDATE notifications SET is_read = 1 WHERE id = ? AND user_id = ?", (notif_id, session['user_id'],))
     db.commit()
     db.close()
     return jsonify({'success': True})
