@@ -200,7 +200,7 @@
 
     {% if use_portal_app_chrome %}
     <header class="app-topbar">
-        <a href="/" class="app-brand" aria-label="Local 3494 home">
+        <a href="{% if request.path.startswith('/family') %}/family{% else %}/members{% endif %}" class="app-brand" aria-label="Local 3494 {% if request.path.startswith('/family') %}Family Home{% else %}Member Home{% endif %}">
             <span class="app-brand__mark">3494</span>
             <span>
                 <span class="app-brand__overline">Davis Professional Firefighters</span>
@@ -236,11 +236,11 @@
     <div class="portal-mode-wrap">
         <div class="mode-switch" aria-label="Portal mode">
             {% if session.get('role') != 'family' %}
-            <a href="/members" class="mode-switch__item {% if request.path.startswith('/members') %}is-active{% endif %}">Member</a>
+            <a href="/members" class="mode-switch__item {% if request.path.startswith('/members') %}is-active{% endif %}">🏠 Member Home</a>
             {% else %}
-            <span class="mode-switch__item is-muted">Member</span>
+            <span class="mode-switch__item is-muted">🏠 Member Home</span>
             {% endif %}
-            <a href="/family" class="mode-switch__item {% if request.path.startswith('/family') %}is-active{% endif %}">Family</a>
+            <a href="/family" class="mode-switch__item {% if request.path.startswith('/family') %}is-active{% endif %}">🏠 Family Home</a>
         </div>
     </div>
     {% endif %}
@@ -521,10 +521,10 @@
           } else if (permission === 'denied') {
             showBlockedNotificationInstructions(status, button);
           } else {
-            if (status) status.textContent = 'Notification permission was not changed. Tap Enable when you are ready.';
+            if (status) status.textContent = 'Notification permission was not changed. Tap Enable Notifications when you are ready.';
             if (button) {
               button.disabled = false;
-              button.textContent = 'Enable';
+              button.textContent = 'Enable Notifications';
             }
           }
         } catch (err) {
@@ -553,8 +553,8 @@
           status.textContent = 'Notifications are blocked. Tap for instructions.';
           button.textContent = 'Fix Settings';
         } else {
-          status.textContent = 'Tap Enable to receive push notifications.';
-          button.textContent = 'Enable';
+          status.textContent = 'Tap Enable Notifications to receive push notifications.';
+          button.textContent = 'Enable Notifications';
         }
       }
 
@@ -572,12 +572,10 @@
           });
       }
 
-      // Auto-request if user is logged in and hasn't been asked
-      if ('Notification' in window && Notification.permission === 'default') {
-        // Delay 3 seconds so it's not jarring on page load
-        setTimeout(requestNotificationPermission, 3000);
-      } else if ('Notification' in window && Notification.permission === 'granted') {
-        // Permission already granted — silently refresh token in case SW update invalidated it
+      // Permission prompts stay behind the explicit Enable Notifications button.
+      // If permission is already granted, silently refresh the token in case a
+      // service-worker update invalidated it.
+      if ('Notification' in window && Notification.permission === 'granted') {
         setTimeout(async function() {
           try {
             await registerPushToken();
