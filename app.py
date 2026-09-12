@@ -258,6 +258,36 @@ def require_login():
         return False
     return True
 
+@app.before_request
+def refresh_authenticated_member_role():
+    """Keep role-based access in sync when an administrator changes a member's role."""
+    if 'user_id' not in session or request.endpoint == 'static':
+        return
+
+    db = None
+    try:
+        db = get_db()
+        member = db.execute(
+            "SELECT role FROM members WHERE id = ?",
+            (session['user_id'],),
+        ).fetchone()
+        if member:
+            current_role = member['role']
+            current_values = {
+                'role': current_role,
+                'member_role': current_role,
+                'user_type': 'family' if current_role == 'family' else 'member',
+            }
+            for key, value in current_values.items():
+                if session.get(key) != value:
+                    session[key] = value
+    except Exception:
+        # A temporary database error should not discard an otherwise valid session.
+        pass
+    finally:
+        if db is not None:
+            db.close()
+
 def get_member_role():
     """Get current member's role from session"""
     return session.get('role', 'member')
