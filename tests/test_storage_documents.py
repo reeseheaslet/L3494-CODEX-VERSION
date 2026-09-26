@@ -16,6 +16,20 @@ def test_storage_below_threshold_does_not_warn(tmp_path):
     assert status["warning"] is False
 
 
+def test_storage_scan_skips_virtualenv_and_generated_directories(tmp_path):
+    (tmp_path / "tracked.bin").write_bytes(b"x" * 10)
+    for directory in (".git", ".venv", "venv", "__pycache__"):
+        excluded = tmp_path / directory
+        excluded.mkdir()
+        (excluded / "ignored.bin").write_bytes(b"x" * 100)
+
+    status = union_app.get_storage_status(tmp_path, quota_bytes=100, warning_percent=80)
+
+    assert status["used_bytes"] == 10
+    assert status["percent"] == 10
+    assert status["warning"] is False
+
+
 def test_documents_page_has_no_external_url_option(monkeypatch):
     monkeypatch.setitem(union_app.app.config, "WTF_CSRF_ENABLED", False)
     monkeypatch.setattr(union_app, "require_member_access", lambda: True)

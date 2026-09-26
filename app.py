@@ -87,6 +87,7 @@ STORAGE_QUOTA_BYTES = int(os.environ.get('PYTHONANYWHERE_STORAGE_QUOTA_BYTES', 5
 STORAGE_WARNING_PERCENT = int(os.environ.get('STORAGE_WARNING_PERCENT', 80))
 STORAGE_STATUS_CACHE_SECONDS = int(os.environ.get('STORAGE_STATUS_CACHE_SECONDS', 300))
 _storage_status_cache = {'checked_at': 0, 'value': None}
+STORAGE_SCAN_EXCLUDED_DIRS = {'.git', '.venv', 'venv', '__pycache__'}
 UPLOAD_FOLDER = os.path.join(os.path.dirname(__file__), 'static/images/family')
 MEMBER_UPLOAD_FOLDER = os.path.join(os.path.dirname(__file__), 'static/images/members')
 PROFILE_PHOTO_FOLDER = os.path.join(os.path.dirname(__file__), 'static/images/profiles')
@@ -107,7 +108,7 @@ def directory_size_bytes(root_path):
     total = 0
     try:
         for current_root, dirs, files in os.walk(root_path, followlinks=False):
-            dirs[:] = [name for name in dirs if name != '.git']
+            dirs[:] = [name for name in dirs if name not in STORAGE_SCAN_EXCLUDED_DIRS]
             for filename in files:
                 path = os.path.join(current_root, filename)
                 try:
