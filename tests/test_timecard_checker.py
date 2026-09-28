@@ -30,6 +30,26 @@ def test_pipeline_matching_synthetic_exports_have_no_review_items():
     assert not result["NeedsReview"].any()
 
 
+def test_pipeline_excludes_noah_easterday_from_comparison_results():
+    executime_csv = (
+        "startTime,timeEntryTypeLabel,totalTime,approvals,employeeLabel,employeeId\n"
+        '"Aug 01, 2026 08:00 AM",01 (Reg Hours),1,1=x,"EASTERDAY, NOAH",1\n'
+    ).encode()
+    firstdue_csv = (
+        "Start at (local datetime),End at (local datetime),Duration (hours),Last Name,First Name,Personnel Rank,Activity Type Shortcode,Activity Subtype Name\n"
+        "2026-08-01 08:00:00,2026-08-01 16:00:00,8,Easterday,Noah,Firefighter,REG,\n"
+    ).encode()
+
+    result = run_web_pipeline(
+        BytesIO(executime_csv),
+        BytesIO(firstdue_csv),
+        "2026-08-01",
+        "2026-08-14",
+    )
+
+    assert result.empty
+
+
 def _app():
     app = Flask(__name__, template_folder="../templates")
     app.secret_key = "test"
