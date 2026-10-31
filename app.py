@@ -10,7 +10,7 @@ from datetime import datetime, timedelta, date
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from functools import wraps
-from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify, send_from_directory
+from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify, send_from_directory, abort
 from flask_wtf.csrf import CSRFProtect
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
@@ -92,6 +92,18 @@ UPLOAD_FOLDER = os.path.join(os.path.dirname(__file__), 'static/images/family')
 MEMBER_UPLOAD_FOLDER = os.path.join(os.path.dirname(__file__), 'static/images/members')
 PROFILE_PHOTO_FOLDER = os.path.join(os.path.dirname(__file__), 'static/images/profiles')
 DISCUSSION_ATTACHMENTS_FOLDER = os.path.join(os.path.dirname(__file__), 'static/images/discussion_attachments')
+FIREGROUND_STUDIO_FOLDER = os.path.join(os.path.dirname(__file__), 'member_tools/fireground_studio')
+FIREGROUND_STUDIO_FILES = frozenset({
+    'index.html',
+    'style.css',
+    'app.js',
+    'model.js',
+    'quality.js',
+    'legacy-effects.js',
+    'effects.js',
+    'candidate.js',
+    'demo.js',
+})
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
@@ -347,6 +359,35 @@ def require_member_access():
         flash('Family members cannot access the member portal.', 'error')
         return False
     return True
+
+def fireground_studio_response(filename):
+    """Serve one reviewed simulator file with private, standalone-app headers."""
+    response = send_from_directory(FIREGROUND_STUDIO_FOLDER, filename)
+    response.headers['Cache-Control'] = 'private, no-store'
+    response.headers['Content-Security-Policy'] = (
+        "default-src 'self' data: blob:; script-src 'self'; "
+        "style-src 'self' 'unsafe-inline'; connect-src 'self'; "
+        "img-src 'self' data: blob:; object-src 'none'; "
+        "base-uri 'none'; frame-ancestors 'none'"
+    )
+    response.headers['X-Content-Type-Options'] = 'nosniff'
+    response.headers['X-Frame-Options'] = 'DENY'
+    response.headers['Referrer-Policy'] = 'no-referrer'
+    return response
+
+@app.get('/members/fireground-studio/')
+def member_fireground_studio():
+    if not require_member_access():
+        return redirect(url_for('family_home') if session.get('role') == 'family' else url_for('login'))
+    return fireground_studio_response('index.html')
+
+@app.get('/members/fireground-studio/<path:filename>')
+def member_fireground_studio_asset(filename):
+    if not require_member_access():
+        return redirect(url_for('family_home') if session.get('role') == 'family' else url_for('login'))
+    if filename not in FIREGROUND_STUDIO_FILES or filename == 'index.html':
+        abort(404)
+    return fireground_studio_response(filename)
 
 def get_member_visible_event(db, event_id):
     """Return an event only when it is intended for the member portal."""
