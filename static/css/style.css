@@ -847,3 +847,11 @@
         min-height: 66px;
     }
 }
+
+/* Persistent, compact return links for portal sections, including landscape. */
+.portal-return-nav { position: sticky; top: 0; z-index: 51; display: flex; align-items: center; gap: 8px; padding: 5px 12px; background: #fff; border-bottom: 1px solid #dce3ea; box-shadow: 0 2px 8px #12233a12; }
+.portal-return-nav a { display: inline-flex; align-items: center; min-height: 44px; padding: 4px 10px; border-radius: 6px; color: #9e0e26; font-size: 13px; font-weight: 700; text-decoration: none; }
+.portal-return-nav a:hover, .portal-return-nav a:focus-visible { background: #fff1f3; text-decoration: underline; }
+
+/* Get-the-app keeps the public 64px sticky header above the return bar. */
+.portal-return-nav--public-header { top: 64px; z-index: 49; }

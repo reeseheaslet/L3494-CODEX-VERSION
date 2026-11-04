@@ -308,6 +308,33 @@
     </div>
     {% endif %}
 
+    {% set portal_family = request.path.startswith('/family') %}
+    {% set portal_home = '/family' if portal_family else '/members' %}
+    {% if session.get('user_id') and (request.path.startswith('/members/') or request.path.startswith('/family/')) %}
+    {% set parent = namespace(url=none, label=none) %}
+    {% if request.path.startswith('/members/events/') or request.path.startswith('/members/meetings/') %}
+        {% set parent.url, parent.label = '/members/events', 'Events' %}
+    {% elif request.path.startswith('/members/documents/') %}
+        {% set parent.url, parent.label = '/members/documents', 'Documents' %}
+    {% elif request.path.startswith('/members/discussions/') %}
+        {% set parent.url, parent.label = '/members/discussions', 'Discussions' %}
+    {% elif request.path.startswith('/family/discussions/') %}
+        {% if request.endpoint == 'view_discussion_post' and post is defined and post.category_slug %}
+            {% set parent.url, parent.label = '/family/discussions/' ~ post.category_slug, post.category_name %}
+        {% else %}
+            {% set parent.url, parent.label = '/family/discussions', 'Discussions' %}
+        {% endif %}
+    {% elif request.path.startswith('/members/photos/') %}
+        {% set parent.url, parent.label = '/members/photos', 'Photos' %}
+    {% elif request.path.startswith('/family/photos/') %}
+        {% set parent.url, parent.label = '/family/photos', 'Photos' %}
+    {% endif %}
+    <nav class="portal-return-nav{% if not use_portal_app_chrome %} portal-return-nav--public-header{% endif %}" aria-label="Portal return navigation">
+        {% if parent.url %}<a href="{{ parent.url }}">← {{ parent.label }}</a>{% endif %}
+        <a href="{{ portal_home }}">{{ 'Family Home' if portal_family else 'Member Home' }}</a>
+    </nav>
+    {% endif %}
+
     <!-- Page Content -->
     <main class="flex-1">
         {% block content %}{% endblock %}

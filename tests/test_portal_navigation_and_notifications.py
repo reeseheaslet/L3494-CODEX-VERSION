@@ -44,3 +44,32 @@ def test_notification_permission_requires_explicit_click_and_keeps_granted_refre
     for portal in ("member", "family"):
         template = (ROOT / "templates" / f"{portal}_get_app.html").read_text()
         assert 'onclick="requestNotificationPermission()"' in template
+
+
+def test_return_navigation_renders_context_and_role():
+    import app as union_app
+    from flask import session
+
+    cases = [
+        ('/members/events/42', 'member', '/members/events', 'Events', '/members', 'Member Home'),
+        ('/members/documents/union-meeting-minutes', 'member', '/members/documents', 'Documents', '/members', 'Member Home'),
+        ('/members/events', 'member', None, None, '/members', 'Member Home'),
+        ('/family/discussions/general', 'family', '/family/discussions', 'Discussions', '/family', 'Family Home'),
+        ('/family/get-the-app', 'family', None, None, '/family', 'Family Home'),
+    ]
+    for path, role, parent, label, home, home_label in cases:
+        with union_app.app.test_request_context(path):
+            session.update(user_id=1, role=role, username='Test')
+            html = union_app.app.jinja_env.get_template('base.html').render()
+            bar = html.split('<nav class="portal-return-nav', 1)[1].split('</nav>', 1)[0]
+            assert f'href="{home}">{home_label}</a>' in bar
+            if parent:
+                assert f'href="{parent}">← {label}</a>' in bar
+            else:
+                assert bar.count('<a ') == 1
+            if role == 'family':
+                assert 'href="/members"' not in bar
+
+    with union_app.app.test_request_context('/members'):
+        session.update(user_id=1, role='member', username='Test')
+        assert 'portal-return-nav' not in union_app.app.jinja_env.get_template('base.html').render()

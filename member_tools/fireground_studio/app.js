@@ -9,6 +9,21 @@ function changed(render=true){revision++;dirty=true;project.updated=Date.now();$
 async function openDB(){return new Promise((resolve,reject)=>{const r=indexedDB.open('fireground-studio-v1',1);r.onupgradeneeded=()=>{r.result.createObjectStore('projects',{keyPath:'id'});r.result.createObjectStore('settings');};r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error);});}
 function request(store,mode,fn){return new Promise((resolve,reject)=>{const tx=db.transaction(store,mode),r=fn(tx.objectStore(store));let value;r.onsuccess=()=>value=r.result;tx.oncomplete=()=>resolve(value);tx.onerror=()=>reject(tx.error);tx.onabort=()=>reject(tx.error);});}
 function save(){if(!db){$('#saveStatus').textContent='Storage unavailable · export to save';return Promise.resolve(false);}const copy=structuredClone(project),rev=revision;writeQueue=writeQueue.catch(()=>{}).then(async()=>{try{await request('projects','readwrite',s=>s.put(copy));await request('settings','readwrite',s=>s.put(copy.id,'last'));if(rev===revision){dirty=false;savedRevision=rev;$('#saveStatus').textContent='Saved on this device';}return true;}catch(e){$('#saveStatus').textContent='Save failed · export a backup';toast('Local storage is full or unavailable. Export your project now.');return false;}});return writeQueue;}
+async function goMemberHome(){
+ clearTimeout(saveTimer);
+ while(dirty){
+  if(!await save()){
+   if(presenting)exitPresent();
+   modal('<h2>Keep your unsaved work</h2><p class="muted">This scenario could not be saved on this device. Stay here and export a backup, or retry saving before leaving.</p><div class="modal-actions"><button id="stayHome" class="primary">Stay here</button><button id="exportHome">Export current backup</button><button id="retryHome">Retry save &amp; leave</button></div>');
+   $('#stayHome').onclick=()=>$('#modal').close();
+   $('#exportHome').onclick=()=>{download(new Blob([JSON.stringify(project,null,2)],{type:'application/json'}),exportName()+'.fireground');toast('Backup exported. Current changes are still unsaved on this device.');};
+   $('#retryHome').onclick=()=>{$('#modal').close();goMemberHome();};
+   return;
+  }
+ }
+ window.location.assign('/members');
+}
+$$('.studio-home').forEach(link=>link.addEventListener('click',event=>{event.preventDefault();goMemberHome();}));
 function escape(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 async function setProject(p,preserve=true){const ticket=++transitionSerial;if(preserve){while(dirty){const ok=await save();if(ticket!==transitionSerial)return false;if(!ok){unsavedDecision(p);return false;}}if(p.id===project.id)return true;}p.name=M.boundedName(p.name);project=p;viewId=p.views[0].id;selected=null;placementGhost=null;time=0;playing=false;drag=null;history.past=[];history.future=[];maskPoints=null;images.clear();changed();return true;}
 function unsavedDecision(next){modal('<h2>Keep your unsaved work</h2><p class="muted">The current scenario could not be saved on this device. It is still open, with your changes intact. Export a backup or retry saving before switching.</p><div class="modal-actions"><button id="keepUnsaved" class="primary">Stay here</button><button id="backupUnsaved">Export current backup</button><button id="retrySwitch">Retry save & switch</button></div><h3>Discard changes</h3><p class="small muted">Only choose this if you have a backup or no longer need the current unsaved changes.</p><button id="discardSwitch" class="danger">Discard unsaved changes & switch</button>');$('#keepUnsaved').onclick=()=>$('#modal').close();$('#backupUnsaved').onclick=()=>{download(new Blob([JSON.stringify(project,null,2)],{type:'application/json'}),exportName()+'.fireground');toast('Backup exported. Current changes are still unsaved on this device.');};$('#retrySwitch').onclick=async()=>{if(await setProject(next))$('#modal').close();};$('#discardSwitch').onclick=async()=>{await setProject(next,false);$('#modal').close();};}
