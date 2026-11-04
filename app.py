@@ -1,4 +1,5 @@
 import os
+import hashlib
 import json
 import secrets
 import uuid
@@ -4418,6 +4419,57 @@ def member_profile():
 
 # ========== MEMBER DOCUMENTS ==========
 
+# Reviewed preview assets are explicit, source-bound, and never generated on request.
+# The original document URLs and records remain the source of truth.
+DOCUMENT_PREVIEWS = {
+    '/static/documents/Cancer_Screening_reimbursement_form_3-3-26.docx': {
+        'source': 'static/documents/Cancer_Screening_reimbursement_form_3-3-26.docx',
+        'sha256': '7d97ef2200f98ef81e7bd3258a6924120ebe34878ffc5879ee2193fa383826f7',
+        'pdf': 'cancer-screening.pdf', 'pages': ['cancer-screening-page-1.png'],
+        'text': 'cancer-screening.txt',
+    },
+    '/static/documents/77a1e44e9067450eacc22cf3162014b0_Overtime_scenarios.docx': {
+        'source': 'static/documents/77a1e44e9067450eacc22cf3162014b0_Overtime_scenarios.docx',
+        'sha256': '71b1a06fe62ffbae6275581a57166520fd1e3a548973d3ecf1612a7f33c817f2',
+        'pdf': 'overtime-scenarios.pdf',
+        'pages': ['overtime-scenarios-page-1.png', 'overtime-scenarios-page-2.png'],
+        'text': 'overtime-scenarios.txt',
+    },
+}
+DOCUMENT_PREVIEW_FOLDER = os.path.join(app.root_path, 'member_tools', 'document_previews')
+
+
+def reviewed_document_preview(url):
+    preview = DOCUMENT_PREVIEWS.get(url)
+    if not preview:
+        return None
+    # Only manifest entries are read; neither database URLs nor request paths form paths.
+    source = os.path.join(app.root_path, preview['source'])
+    assets = [preview['pdf'], preview['text'], *preview['pages']]
+    try:
+        if not preview['pages'] or not all(
+            os.path.isfile(os.path.join(DOCUMENT_PREVIEW_FOLDER, name)) for name in assets
+        ):
+            return None
+        with open(source, 'rb') as original:
+            if hashlib.sha256(original.read()).hexdigest() != preview['sha256']:
+                return None
+    except OSError:
+        return None
+    return preview
+
+
+def get_general_document(doc_id):
+    db = get_db()
+    try:
+        return db.execute("""SELECT id, title, description, url, added_by, created_at
+            FROM member_documents WHERE id = ? AND COALESCE(category, 'general') = 'general'""",
+            (doc_id,)).fetchone()
+    finally:
+        db.close()
+
+
+
 @app.route('/members/documents')
 def member_documents():
     """View member documents - members only"""
@@ -4433,11 +4485,53 @@ def member_documents():
     """).fetchall()
     db.close()
     
+    documents = [dict(d) for d in documents]
+    for document in documents:
+        document['has_preview'] = reviewed_document_preview(document['url']) is not None
+
     return render_template('member_documents.html',
-        documents=[dict(d) for d in documents],
+        documents=documents,
         username=session.get('username', ''),
         role=session.get('role', 'member')
     )
+
+@app.route('/members/documents/<int:doc_id>/view')
+def view_member_document(doc_id):
+    if not require_member_access():
+        return redirect(url_for('login'))
+    document = get_general_document(doc_id)
+    if document is None:
+        abort(404)
+    document = dict(document)
+    preview = reviewed_document_preview(document['url'])
+    text_content = None
+    if preview:
+        try:
+            with open(os.path.join(DOCUMENT_PREVIEW_FOLDER, preview['text']), encoding='utf-8') as text_file:
+                text_content = text_file.read()
+        except (OSError, UnicodeError):
+            preview = None
+    response = app.make_response(render_template('member_document_view.html', document=document,
+                                                 preview=preview, text_content=text_content))
+    response.headers['Cache-Control'] = 'private, no-store'
+    return response
+
+
+@app.route('/members/documents/<int:doc_id>/preview/<filename>')
+def member_document_preview_asset(doc_id, filename):
+    if not require_member_access():
+        return redirect(url_for('login'))
+    document = get_general_document(doc_id)
+    if document is None:
+        abort(404)
+    preview = reviewed_document_preview(document['url'])
+    if not preview or filename not in [preview['pdf'], *preview['pages']]:
+        abort(404)
+    response = send_from_directory(DOCUMENT_PREVIEW_FOLDER, filename,
+                                   as_attachment=filename == preview['pdf'])
+    response.headers['Cache-Control'] = 'private, no-store'
+    return response
+
 
 @app.route('/members/documents/union-meeting-minutes')
 def union_meeting_minutes():

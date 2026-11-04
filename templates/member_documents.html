@@ -73,11 +73,17 @@
             {% for doc in documents %}
             <div class="bg-white border border-gray-200 rounded-lg shadow-sm p-6 flex flex-col">
                 <div class="flex-1 mb-4">
-                    <!-- Title Link -->
-                    <a href="{{ doc.url }}" target="_blank" rel="noopener" download class="font-heading font-bold text-navy text-lg hover:text-fire transition hover:underline block mb-2">
-                        {{ doc.title }}
-                        <svg class="w-4 h-4 inline ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
-                    </a>
+                    {% if doc.has_preview %}
+                    <a href="{{ url_for('view_member_document', doc_id=doc.id) }}" class="font-heading font-bold text-navy text-lg hover:text-fire hover:underline block mb-2">{{ doc.title }}</a>
+                    <a href="{{ url_for('view_member_document', doc_id=doc.id) }}" class="text-fire font-semibold hover:underline block mb-2">View document</a>
+                    <a href="{{ doc.url }}" target="_blank" rel="noopener" download class="text-navy text-sm hover:underline block mb-2">Download editable Word original (opens outside website)</a>
+                    {% else %}
+                    <a href="{{ doc.url }}" target="_blank" rel="noopener" download class="font-heading font-bold text-navy text-lg hover:text-fire transition hover:underline block mb-2">{{ doc.title }}</a>
+                    {% if doc.url.lower().endswith(('.doc', '.docx', '.xls', '.xlsx')) %}
+                    <a href="{{ doc.url }}" target="_blank" rel="noopener" download class="text-navy text-sm hover:underline block mb-2">Download original (opens outside website)</a>
+                    <p class="text-gray-500 text-xs mb-2">In-site preview is not available.</p>
+                    {% endif %}
+                    {% endif %}
                     
                     <!-- Description -->
                     {% if doc.description %}

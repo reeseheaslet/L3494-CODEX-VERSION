@@ -1,0 +1,71 @@
+Overtime scenarios
+1. Forced on a 96- personnel can be forced on a 96 – However, if the spot
+being filled is not the next day, the person that is up to be forced is “on the
+hook” for the spot, but not put in the schedule. The department will try to find
+another person to force who will not be put on a 96. If nobody meets that
+criteria before the start of that shift, the person who is “on the hook” will be
+forced. If the spot is for the next day, then that person would be forced on a
+96,
+
+2. Bereavement leave does not protect you from being forced on the in-
+between days of your set—unless on that date of the potential forcing is a
+date where you are doing the bereavement related event. (For example a
+funeral for the deceased lands on a day you don’t work the department would
+not force you for that day). It is treated the same as if you are sick: if you are
+sick and cannot come into work due to being unable to perform the job the
+department would not force you to come in and work.
+
+3. In a situation where a driver took vacation and the other on duty FF at that
+station (31 or 32) is not a driver, you call specifically for engine drivers. Even
+if at a different station there are 2 engine driver qualified firefighters. If no
+engine driver takes it you then can move an engine driver and call for FF1
+firefighters to avoid forcing. Basically the idea is we don’t make firefighters
+move stations just because a FF1 is boxes back in the recall book. This does
+not apply to station 33 with the truck. We do bump FF2s from the truck to
+engine 33 driver to call for FF1 (tiller qualified) drivers if those FF1s are boxes
+back.
+
+4. When filling for OT when somebody is returning from injury leave. It is case
+by case: if the person returning is confident they will be cleared they can be
+called for OT on dates that are after their appointment, even if the call for OT
+is being made before the appointment. If this is not the case then that person
+won’t be called. Check with BC to clarify if said person should be included on
+the OT recall list. The idea being that we try to anticipate the most likely
+outcome, and fill OT for that.
+
+5. Trades - treat “apparatus operator” as somebody that is qualified to drive
+ALL apparatus (in most cases a FFII). An apparatus operator can trade with a
+non-apparatus operator if said apparatus operator is not scheduled to drive
+that day. If he becomes scheduled to drive and that trade causes overtime
+then the trade will be cancelled. Non ‘apparatus operators’ can trade with
+non apparatus operators and when that trade causes overtime due to the
+TRADE OFF person being qualified to drive a specific spot (tiller/squad/etc)
+that the TRADE ON person is not qualified to drive - then overtime will be
+called and the trade is kept.
+
+6. If a spot becomes vacant during a shift which causes the dept to dip below
+minimum staffing and is greater than 12 hours OT. Then emergency recall
+will be initiated (to try to get the spot filled ASAP) and standard recall
+procedures will be started to fill for the rest of the shift.
+7. Out of rank overtime. This is reserved for special circumstances that
+requires the fire chief’s approval.
+
+8. When filling vacancies with recalled FFs and Captains, the goal is always
+to determine what “caused” the vacancy and to fill with a like position. In
+other words, if a Captain “caused” the vacancy, it should be filled with a
+Captain. Similarly, if a FF “caused” the vacancy, it should be filled with a FF
+(making sure that they are qualified as a driver, squad driver, etc. if
+necessary).
+
+9. If somebody who accepted OT, and is slotted in to work OT in the schedule,
+gets moved off the schedule in a way that would normally “cause” overtime –
+that open spot gets filled with whatever originally caused that OT. Example:
+an open spot is caused by a FF, but due to a captain vacation there is only an
+empty slot for a captain. You bump up an AC and call for a FF. Let’s say no
+FFs take the OT, and you bump the AC back down and fill the spot with a
+Captain to avoid forcing. Then the next day that captain gets sent out as a
+strike team leader trainee. You would revert back to calling FFs for that spot
+again first, and ultimately would force a FF if needed for that spot. That spot
+is not “caused” by a Captain because somebody cannot “cause” a spot if it is
+not their shift.
+

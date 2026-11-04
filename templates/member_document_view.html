@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}{{ document.title }} · Local 3494{% endblock %}
+{% block content %}
+<section class="bg-navy py-8"><div class="max-w-5xl mx-auto px-4">
+    <h1 class="font-heading font-bold text-3xl text-white">{{ document.title }}</h1>
+    {% if document.description %}<p class="text-gray-300 mt-2">{{ document.description }}</p>{% endif %}
+</div></section>
+<div class="h-1 bg-gradient-to-r from-fire via-red-400 to-fire"></div>
+<section class="py-8 bg-gray-50 min-h-screen"><div class="max-w-5xl mx-auto px-4">
+    <div class="flex flex-wrap gap-4 mb-6">
+        {% if preview %}<a href="{{ url_for('member_document_preview_asset', doc_id=document.id, filename=preview.pdf) }}" class="bg-fire text-white font-semibold py-3 px-5 rounded-lg">Download PDF</a>{% endif %}
+        <a href="{{ document.url }}" target="_blank" rel="noopener" download class="bg-navy text-white font-semibold py-3 px-5 rounded-lg">{% if preview %}Download editable Word original{% else %}Download original{% endif %} (opens outside website)</a>
+    </div>
+    {% if preview %}
+    <p class="text-gray-600 mb-4">Document preview. Read the text version below, download the PDF, or download the original to edit it.</p>
+    <details class="bg-white p-4 mb-6 border rounded"><summary class="font-semibold cursor-pointer">Read text version</summary><pre class="whitespace-pre-wrap break-words mt-4">{{ text_content }}</pre></details>
+    {% for page in preview.pages %}
+    <figure class="mb-6"><img src="{{ url_for('member_document_preview_asset', doc_id=document.id, filename=page) }}" alt="{{ document.title }}, page {{ loop.index }} of {{ loop.length }}. The text version is available above." class="w-full h-auto shadow-sm" loading="lazy"><figcaption class="text-gray-600 text-sm mt-1">Page {{ loop.index }} of {{ loop.length }}</figcaption></figure>
+    {% endfor %}
+    {% else %}<p class="text-gray-600">In-site preview is not available. Download the original above.</p>{% endif %}
+</div></section>
+{% endblock %}
